@@ -29,7 +29,13 @@
 
 ## Gateway Routes (port 8080)
 
-*To be documented during Phase 3.*
+| Method | Endpoint         | Routed Target Service                  |
+|--------|------------------|----------------------------------------|
+| ANY    | /orders/**       | http://localhost:8081/orders/**        |
+| ANY    | /payments/**     | http://localhost:8082/payments/**      |
+| ANY    | /inventory/**    | http://localhost:8083/inventory/**     |
+| GET    | /gateway/health  | Gateway self-status check              |
+
 
 ## ML Service (port 5000)
 

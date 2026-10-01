@@ -42,4 +42,11 @@ SPRING CLOUD GATEWAY (port 8080)
 
 ## Component Details
 
-*To be added in subsequent phases.*
+### 1. Spring Cloud Gateway (`port 8080`)
+- Built on Spring Boot 3.2.5, Spring Cloud 2023.0.1, and reactive Netty.
+- Routes:
+  - `/orders/**` ➔ `http://localhost:8081` (Order Service)
+  - `/payments/**` ➔ `http://localhost:8082` (Payment Service)
+  - `/inventory/**` ➔ `http://localhost:8083` (Inventory Service)
+- Health check: `/gateway/health`
+
