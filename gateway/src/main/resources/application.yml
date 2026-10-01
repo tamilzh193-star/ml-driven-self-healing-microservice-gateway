@@ -33,3 +33,9 @@ management:
   info:
     env:
       enabled: true
+
+telemetry:
+  collection:
+    enabled: true
+    interval-ms: 5000
+    csv-path: ../dataset/telemetry.csv
