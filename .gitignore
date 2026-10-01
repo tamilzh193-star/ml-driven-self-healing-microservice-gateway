@@ -1,0 +1,77 @@
+# ===========================
+# Java / Maven
+# ===========================
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+*.iml
+
+# ===========================
+# Spring Boot
+# ===========================
+*.pid
+application-local.properties
+
+# ===========================
+# Python
+# ===========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+venv/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# ===========================
+# ML Model artifacts
+# ===========================
+ml-service/model/*.joblib
+
+# ===========================
+# IDE
+# ===========================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+.factorypath
+*.ipr
+*.iws
+.nb-gradle/
+
+# ===========================
+# OS
+# ===========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===========================
+# Docker
+# ===========================
+docker-compose.override.yml
+
+# ===========================
+# Environment / Secrets
+# ===========================
+.env
+*.env.local
+
+# ===========================
+# Misc
+# ===========================
+*.tmp
+*.bak
+*.orig
+logs/
