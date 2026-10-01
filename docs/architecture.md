@@ -49,4 +49,13 @@ SPRING CLOUD GATEWAY (port 8080)
   - `/payments/**` ➔ `http://localhost:8082` (Payment Service)
   - `/inventory/**` ➔ `http://localhost:8083` (Inventory Service)
 - Health check: `/gateway/health`
+- Actuator endpoints: `/actuator/health`, `/actuator/metrics`
+
+### 2. Spring Boot Actuator
+- Integrated into all 4 services (`order-service`, `payment-service`, `inventory-service`, `api-gateway`).
+- Exposes:
+  - `/actuator/health` (with full component details for recovery verification)
+  - `/actuator/metrics` (CPU, memory, request volume, response latency)
+- Serves as the raw metric source polled by Phase 5 telemetry collection.
+- Distinct from ML anomaly detection (Actuator provides raw metrics; Isolation Forest detects anomalies).
 
