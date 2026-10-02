@@ -25,7 +25,7 @@ public class TelemetryCollectorService {
 
     private static final Logger log = LoggerFactory.getLogger(TelemetryCollectorService.class);
     private static final String CSV_HEADER = "timestamp,service,cpu,memory,latency,error_rate,request_rate,health_status";
-    private static final Duration TIMEOUT = Duration.ofMillis(3000);
+    private static final Duration TIMEOUT = Duration.ofMillis(10000);
 
     private final WebClient webClient;
 
@@ -38,6 +38,9 @@ public class TelemetryCollectorService {
     // Track configured service URLs: serviceName -> baseUrl
     private final Map<String, String> targetServices = new LinkedHashMap<>();
 
+    // Track primary business endpoint per service for active latency and error observation
+    private final Map<String, String> businessEndpoints = new LinkedHashMap<>();
+
     // Keep latest telemetry per service
     private final Map<String, ServiceTelemetry> latestTelemetryMap = new ConcurrentHashMap<>();
 
@@ -45,8 +48,9 @@ public class TelemetryCollectorService {
     private final Deque<ServiceTelemetry> history = new ConcurrentLinkedDeque<>();
     private static final int MAX_HISTORY = 100;
 
-    // Track previous counts to calculate request rate deltas
+    // Track previous business request metrics to calculate delta request rate and delta latency
     private final Map<String, Long> previousRequestCount = new ConcurrentHashMap<>();
+    private final Map<String, Double> previousTotalTimeSec = new ConcurrentHashMap<>();
     private final Map<String, Long> previousTimestampMillis = new ConcurrentHashMap<>();
 
     public TelemetryCollectorService() {
@@ -66,6 +70,10 @@ public class TelemetryCollectorService {
         targetServices.put("order-service", "http://localhost:8081");
         targetServices.put("payment-service", "http://localhost:8082");
         targetServices.put("inventory-service", "http://localhost:8083");
+
+        businessEndpoints.put("order-service", "/orders");
+        businessEndpoints.put("payment-service", "/payments");
+        businessEndpoints.put("inventory-service", "/inventory");
 
         initCsvFile();
         log.info("TelemetryCollectorService initialized with targets: {}", targetServices.keySet());
@@ -132,7 +140,7 @@ public class TelemetryCollectorService {
             // 3. JVM Memory Usage (% based on heap used / max)
             double memoryPercent = fetchMemoryUsage(serviceName, baseUrl);
 
-            // 4. HTTP Metrics (latency ms, error rate %, request rate req/sec)
+            // 4. HTTP Metrics (business response latency ms, error rate %, request rate req/sec)
             HttpMetrics metrics = fetchHttpMetrics(serviceName, baseUrl);
 
             ServiceTelemetry telemetry = new ServiceTelemetry(serviceName, cpuPercent, memoryPercent,
@@ -190,7 +198,6 @@ public class TelemetryCollectorService {
                 if (raw < 0.0) {
                     raw = 0.0;
                 }
-                // Convert 0.0 - 1.0 fraction to 0.0 - 100.0 percentage
                 double percent = raw * 100.0;
                 return Math.round(percent * 100.0) / 100.0;
             }
@@ -202,7 +209,6 @@ public class TelemetryCollectorService {
 
     private double fetchMemoryUsage(String serviceName, String baseUrl) {
         try {
-            // Query heap memory explicitly to ensure reliable measurement across JVMs
             JsonNode usedNode = webClient.get()
                     .uri(baseUrl + "/actuator/metrics/jvm.memory.used?tag=area:heap")
                     .retrieve()
@@ -228,7 +234,6 @@ public class TelemetryCollectorService {
                 max = maxNode.get("measurements").get(0).get("value").asDouble(0.0);
             }
 
-            // Fallback: If heap max is negative (unrestricted) or zero, query jvm.memory.committed
             if (max <= 0.0) {
                 JsonNode committedNode = webClient.get()
                         .uri(baseUrl + "/actuator/metrics/jvm.memory.committed?tag=area:heap")
@@ -254,101 +259,122 @@ public class TelemetryCollectorService {
 
     private HttpMetrics fetchHttpMetrics(String serviceName, String baseUrl) {
         HttpMetrics result = new HttpMetrics();
+        String businessPath = businessEndpoints.getOrDefault(serviceName, "/");
+
+        // Step 1: Probe the business endpoint to capture real live round-trip latency and fault impact
+        double probeLatencyMs = 0.0;
+        boolean probe5xxError = false;
+        long probeStart = System.nanoTime();
         try {
-            JsonNode baseNode = webClient.get()
-                    .uri(baseUrl + "/actuator/metrics/http.server.requests")
+            webClient.get()
+                    .uri(baseUrl + businessPath)
+                    .retrieve()
+                    .toBodilessEntity()
+                    .timeout(TIMEOUT)
+                    .block();
+            probeLatencyMs = (System.nanoTime() - probeStart) / 1_000_000.0;
+        } catch (WebClientResponseException e) {
+            probeLatencyMs = (System.nanoTime() - probeStart) / 1_000_000.0;
+            if (e.getStatusCode().is5xxServerError()) {
+                probe5xxError = true;
+            }
+            log.debug("Probe to {}{} returned HTTP {}", serviceName, businessPath, e.getStatusCode());
+        } catch (Exception e) {
+            probeLatencyMs = (System.nanoTime() - probeStart) / 1_000_000.0;
+            log.warn("Probe request to {}{} encountered: {}", serviceName, businessPath, e.getMessage());
+        }
+
+        // Step 2: Query Actuator for business endpoint metrics (specifically filtering out /actuator and /chaos)
+        long currentBusinessCount = 0;
+        double currentBusinessTotalTimeSec = 0.0;
+        long error5xxCount = 0;
+
+        try {
+            JsonNode taggedNode = webClient.get()
+                    .uri(baseUrl + "/actuator/metrics/http.server.requests?tag=uri:" + businessPath)
                     .retrieve()
                     .bodyToMono(JsonNode.class)
                     .timeout(TIMEOUT)
                     .block();
 
-            if (baseNode != null && baseNode.has("measurements")) {
-                long totalCount = 0;
-                double totalTimeSec = 0.0;
-
-                for (JsonNode m : baseNode.get("measurements")) {
+            if (taggedNode != null && taggedNode.has("measurements")) {
+                for (JsonNode m : taggedNode.get("measurements")) {
                     String stat = m.get("statistic").asText("");
                     if ("COUNT".equalsIgnoreCase(stat)) {
-                        totalCount = m.get("value").asLong(0);
+                        currentBusinessCount = m.get("value").asLong(0);
                     } else if ("TOTAL_TIME".equalsIgnoreCase(stat)) {
-                        totalTimeSec = m.get("value").asDouble(0.0);
+                        currentBusinessTotalTimeSec = m.get("value").asDouble(0.0);
                     }
-                }
-
-                // Mean latency in ms = (totalTimeSec / totalCount) * 1000
-                if (totalCount > 0) {
-                    result.latencyMs = Math.round((totalTimeSec / totalCount) * 1000.0 * 100.0) / 100.0;
-                }
-
-                // Request rate calculation from delta count between intervals
-                long now = System.currentTimeMillis();
-                Long prevCount = previousRequestCount.get(serviceName);
-                Long prevTime = previousTimestampMillis.get(serviceName);
-
-                if (prevCount != null && prevTime != null && now > prevTime) {
-                    long deltaCount = totalCount - prevCount;
-                    if (deltaCount < 0) deltaCount = 0;
-                    double deltaSec = (now - prevTime) / 1000.0;
-                    if (deltaSec > 0.0) {
-                        result.requestRate = Math.round((deltaCount / deltaSec) * 100.0) / 100.0;
-                    }
-                } else {
-                    result.requestRate = 0.0;
-                }
-
-                previousRequestCount.put(serviceName, totalCount);
-                previousTimestampMillis.put(serviceName, now);
-
-                // Error rate calculation: Check for 5xx errors using available tags
-                long error5xxCount = 0;
-                boolean hasServerErrorTag = false;
-
-                if (baseNode.has("availableTags") && baseNode.get("availableTags").isArray()) {
-                    for (JsonNode tagNode : baseNode.get("availableTags")) {
-                        String tagName = tagNode.get("tag").asText("");
-                        if ("outcome".equalsIgnoreCase(tagName) && tagNode.has("values")) {
-                            for (JsonNode val : tagNode.get("values")) {
-                                if ("SERVER_ERROR".equalsIgnoreCase(val.asText(""))) {
-                                    hasServerErrorTag = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (hasServerErrorTag) {
-                    try {
-                        JsonNode errorNode = webClient.get()
-                                .uri(baseUrl + "/actuator/metrics/http.server.requests?tag=outcome:SERVER_ERROR")
-                                .retrieve()
-                                .bodyToMono(JsonNode.class)
-                                .timeout(TIMEOUT)
-                                .block();
-
-                        if (errorNode != null && errorNode.has("measurements")) {
-                            for (JsonNode em : errorNode.get("measurements")) {
-                                if ("COUNT".equalsIgnoreCase(em.get("statistic").asText(""))) {
-                                    error5xxCount = em.get("value").asLong(0);
-                                    break;
-                                }
-                            }
-                        }
-                    } catch (Exception e) {
-                        log.debug("Error tag query for {} not available: {}", serviceName, e.getMessage());
-                    }
-                }
-
-                if (totalCount > 0 && error5xxCount > 0) {
-                    double errPercent = ((double) error5xxCount / totalCount) * 100.0;
-                    result.errorRate = Math.round(errPercent * 100.0) / 100.0;
-                } else {
-                    result.errorRate = 0.0;
                 }
             }
+        } catch (WebClientResponseException.NotFound ignored) {
+            // Tag not yet initialized
         } catch (Exception e) {
-            log.warn("Failed to fetch http.server.requests for {}: {}", serviceName, e.getMessage());
+            log.debug("Tagged actuator query failed for {}: {}", serviceName, e.getMessage());
         }
+
+        // Step 3: Check for 5xx errors across business endpoints
+        try {
+            JsonNode errorNode = webClient.get()
+                    .uri(baseUrl + "/actuator/metrics/http.server.requests?tag=uri:" + businessPath + "&tag=outcome:SERVER_ERROR")
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .timeout(TIMEOUT)
+                    .block();
+
+            if (errorNode != null && errorNode.has("measurements")) {
+                for (JsonNode em : errorNode.get("measurements")) {
+                    if ("COUNT".equalsIgnoreCase(em.get("statistic").asText(""))) {
+                        error5xxCount = em.get("value").asLong(0);
+                        break;
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+
+        // Step 4: Calculate interval delta latency, throughput, and error rate
+        long now = System.currentTimeMillis();
+        Long prevCount = previousRequestCount.get(serviceName);
+        Double prevTimeSec = previousTotalTimeSec.get(serviceName);
+        Long prevTimeMillis = previousTimestampMillis.get(serviceName);
+
+        if (prevCount != null && prevTimeSec != null && prevTimeMillis != null && now > prevTimeMillis) {
+            long deltaCount = currentBusinessCount - prevCount;
+            double deltaTimeSec = currentBusinessTotalTimeSec - prevTimeSec;
+            double deltaSeconds = (now - prevTimeMillis) / 1000.0;
+
+            if (deltaCount > 0 && deltaTimeSec > 0.0) {
+                // Mean latency of actual requests executed in this interval
+                result.latencyMs = Math.round((deltaTimeSec / deltaCount) * 1000.0 * 100.0) / 100.0;
+            } else {
+                // If no delta available, use the live measured probe latency
+                result.latencyMs = Math.round(probeLatencyMs * 100.0) / 100.0;
+            }
+
+            if (deltaSeconds > 0.0 && deltaCount >= 0) {
+                result.requestRate = Math.round((deltaCount / deltaSeconds) * 100.0) / 100.0;
+            }
+        } else {
+            // First observation: use live probe latency
+            result.latencyMs = Math.round(probeLatencyMs * 100.0) / 100.0;
+            result.requestRate = 0.0;
+        }
+
+        previousRequestCount.put(serviceName, currentBusinessCount);
+        previousTotalTimeSec.put(serviceName, currentBusinessTotalTimeSec);
+        previousTimestampMillis.put(serviceName, now);
+
+        // Step 5: Error Rate calculation
+        if (currentBusinessCount > 0 && error5xxCount > 0) {
+            double errPercent = ((double) error5xxCount / currentBusinessCount) * 100.0;
+            result.errorRate = Math.round(errPercent * 100.0) / 100.0;
+        } else if (probe5xxError) {
+            result.errorRate = 100.0;
+        } else {
+            result.errorRate = 0.0;
+        }
+
         return result;
     }
 
