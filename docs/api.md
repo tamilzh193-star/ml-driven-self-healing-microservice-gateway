@@ -43,12 +43,21 @@
 |--------|------------|--------------------------|
 | POST   | /predict   | Predict anomaly status   |
 
-## Chaos Endpoints
+## Chaos / Fault Injection Endpoints
 
-| Method | Endpoint      | Description                    |
-|--------|---------------|--------------------------------|
-| POST   | /chaos/slow   | Inject artificial delay        |
-| POST   | /chaos/error  | Increase error rate            |
-| POST   | /chaos/cpu    | Simulate CPU stress            |
-| POST   | /chaos/memory | Simulate memory pressure       |
-| POST   | /chaos/reset  | Reset all injected faults      |
+Chaos endpoints are provided on each microservice (and routed through the Gateway) for controlled, reversible fault injection.
+
+| Method | Endpoint | Query Parameters | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/chaos/slow` | `delayMs` (default: 1500) | Injects artificial latency into business request handling |
+| `POST` | `/chaos/error` | `active` (default: true) | Simulates service errors by forcing endpoints to return HTTP 500 |
+| `POST` | `/chaos/cpu` | `durationSec` (default: 30) | Generates controlled mathematical workload to raise process CPU to ~70-85% |
+| `POST` | `/chaos/memory` | `megabytes` (default: 50) | Allocates bounded heap memory buffers to raise JVM heap usage |
+| `POST` | `/chaos/reset` | none | Instantly clears all injected delays, errors, CPU threads, and releases memory |
+| `GET` | `/chaos/status` | none | Returns current status of all chaos injection toggles |
+
+### Service URLs:
+- **Order Service:** `http://localhost:8081/chaos/**` (or Gateway: `http://localhost:8080/order-service/chaos/**`)
+- **Payment Service:** `http://localhost:8082/chaos/**` (or Gateway: `http://localhost:8080/payment-service/chaos/**`)
+- **Inventory Service:** `http://localhost:8083/chaos/**` (or Gateway: `http://localhost:8080/inventory-service/chaos/**`)
+

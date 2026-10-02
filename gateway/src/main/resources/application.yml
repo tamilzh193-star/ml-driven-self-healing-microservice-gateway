@@ -22,6 +22,28 @@ spring:
           predicates:
             - Path=/inventory/**
 
+        # Chaos endpoint routes for controlled fault injection via Gateway
+        - id: order-service-chaos
+          uri: http://localhost:8081
+          predicates:
+            - Path=/order-service/chaos/**
+          filters:
+            - StripPrefix=1
+
+        - id: payment-service-chaos
+          uri: http://localhost:8082
+          predicates:
+            - Path=/payment-service/chaos/**
+          filters:
+            - StripPrefix=1
+
+        - id: inventory-service-chaos
+          uri: http://localhost:8083
+          predicates:
+            - Path=/inventory-service/chaos/**
+          filters:
+            - StripPrefix=1
+
 management:
   endpoints:
     web:
