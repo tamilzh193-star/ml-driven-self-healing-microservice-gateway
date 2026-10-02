@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Mono;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -25,6 +25,7 @@ public class TelemetryCollectorService {
 
     private static final Logger log = LoggerFactory.getLogger(TelemetryCollectorService.class);
     private static final String CSV_HEADER = "timestamp,service,cpu,memory,latency,error_rate,request_rate,health_status";
+    private static final Duration TIMEOUT = Duration.ofMillis(3000);
 
     private final WebClient webClient;
 
@@ -48,8 +49,16 @@ public class TelemetryCollectorService {
     private final Map<String, Long> previousRequestCount = new ConcurrentHashMap<>();
     private final Map<String, Long> previousTimestampMillis = new ConcurrentHashMap<>();
 
+    public TelemetryCollectorService() {
+        this.webClient = WebClient.builder()
+                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(2 * 1024 * 1024))
+                .build();
+    }
+
     public TelemetryCollectorService(WebClient.Builder webClientBuilder) {
-        this.webClient = webClientBuilder.build();
+        this.webClient = webClientBuilder
+                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(2 * 1024 * 1024))
+                .build();
     }
 
     @PostConstruct
@@ -76,7 +85,7 @@ public class TelemetryCollectorService {
                 log.info("Initialized telemetry CSV file at {}", file.getAbsolutePath());
             }
         } catch (IOException e) {
-            log.error("Failed to initialize telemetry CSV file: {}", e.getMessage());
+            log.error("Failed to initialize telemetry CSV file: {}", e.getMessage(), e);
         }
     }
 
@@ -88,7 +97,7 @@ public class TelemetryCollectorService {
         collectAll();
     }
 
-    public List<ServiceTelemetry> collectAll() {
+    public synchronized List<ServiceTelemetry> collectAll() {
         List<ServiceTelemetry> results = new ArrayList<>();
         for (Map.Entry<String, String> entry : targetServices.entrySet()) {
             String serviceName = entry.getKey();
@@ -110,95 +119,135 @@ public class TelemetryCollectorService {
     public ServiceTelemetry collectFromService(String serviceName, String baseUrl) {
         try {
             // 1. Health check
-            String healthStatus = fetchHealthStatus(baseUrl);
+            String healthStatus = fetchHealthStatus(serviceName, baseUrl);
 
-            if ("DOWN".equals(healthStatus)) {
-                return new ServiceTelemetry(serviceName, 0.0, 0.0, 0.0, 100.0, 0.0, "DOWN");
+            if (!"UP".equalsIgnoreCase(healthStatus)) {
+                log.warn("Service {} at {} reported health status: {}", serviceName, baseUrl, healthStatus);
+                return new ServiceTelemetry(serviceName, 0.0, 0.0, 0.0, 100.0, 0.0, healthStatus != null ? healthStatus : "DOWN");
             }
 
-            // 2. CPU Usage
-            double cpuPercent = fetchCpuUsage(baseUrl);
+            // 2. CPU Usage (0-100 percentage)
+            double cpuPercent = fetchCpuUsage(serviceName, baseUrl);
 
-            // 3. JVM Memory Usage
-            double memoryPercent = fetchMemoryUsage(baseUrl);
+            // 3. JVM Memory Usage (% based on heap used / max)
+            double memoryPercent = fetchMemoryUsage(serviceName, baseUrl);
 
-            // 4. HTTP Metrics (latency, error rate, request rate)
+            // 4. HTTP Metrics (latency ms, error rate %, request rate req/sec)
             HttpMetrics metrics = fetchHttpMetrics(serviceName, baseUrl);
 
-            return new ServiceTelemetry(serviceName, cpuPercent, memoryPercent,
+            ServiceTelemetry telemetry = new ServiceTelemetry(serviceName, cpuPercent, memoryPercent,
                     metrics.latencyMs, metrics.errorRate, metrics.requestRate, healthStatus);
 
+            log.debug("Telemetry collected for {}: cpu={}%, mem={}%, lat={}ms, err={}%",
+                    serviceName, cpuPercent, memoryPercent, metrics.latencyMs, metrics.errorRate);
+
+            return telemetry;
+
         } catch (Exception e) {
-            log.warn("Telemetry collection failed for {}: {}", serviceName, e.getMessage());
+            log.error("Unexpected error collecting telemetry from {} ({}): {}", serviceName, baseUrl, e.getMessage(), e);
             return new ServiceTelemetry(serviceName, 0.0, 0.0, 0.0, 100.0, 0.0, "DOWN");
         }
     }
 
-    private String fetchHealthStatus(String baseUrl) {
+    private String fetchHealthStatus(String serviceName, String baseUrl) {
         try {
             JsonNode node = webClient.get()
                     .uri(baseUrl + "/actuator/health")
                     .retrieve()
                     .bodyToMono(JsonNode.class)
-                    .timeout(Duration.ofMillis(2000))
-                    .onErrorReturn(null)
+                    .timeout(TIMEOUT)
                     .block();
 
             if (node != null && node.has("status")) {
                 return node.get("status").asText();
             }
-        } catch (Exception ignored) {
+        } catch (WebClientResponseException e) {
+            log.warn("Actuator /actuator/health for {} returned HTTP {}: {}", serviceName, e.getStatusCode(), e.getMessage());
+            try {
+                JsonNode body = e.getResponseBodyAs(JsonNode.class);
+                if (body != null && body.has("status")) {
+                    return body.get("status").asText();
+                }
+            } catch (Exception ignored) {
+            }
+        } catch (Exception e) {
+            log.warn("Failed to reach /actuator/health for {} ({}): {}", serviceName, baseUrl, e.getMessage());
         }
         return "DOWN";
     }
 
-    private double fetchCpuUsage(String baseUrl) {
+    private double fetchCpuUsage(String serviceName, String baseUrl) {
         try {
             JsonNode node = webClient.get()
                     .uri(baseUrl + "/actuator/metrics/process.cpu.usage")
                     .retrieve()
                     .bodyToMono(JsonNode.class)
-                    .timeout(Duration.ofMillis(2000))
-                    .onErrorReturn(null)
+                    .timeout(TIMEOUT)
                     .block();
 
-            if (node != null && node.has("measurements") && node.get("measurements").isArray()) {
+            if (node != null && node.has("measurements") && node.get("measurements").isArray() && !node.get("measurements").isEmpty()) {
                 double raw = node.get("measurements").get(0).get("value").asDouble(0.0);
-                if (raw < 0) raw = 0.0;
-                return Math.round(raw * 10000.0) / 100.0; // scale 0-1 to percentage (e.g. 15.45%)
+                if (raw < 0.0) {
+                    raw = 0.0;
+                }
+                // Convert 0.0 - 1.0 fraction to 0.0 - 100.0 percentage
+                double percent = raw * 100.0;
+                return Math.round(percent * 100.0) / 100.0;
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.warn("Failed to fetch process.cpu.usage for {}: {}", serviceName, e.getMessage());
         }
         return 0.0;
     }
 
-    private double fetchMemoryUsage(String baseUrl) {
+    private double fetchMemoryUsage(String serviceName, String baseUrl) {
         try {
+            // Query heap memory explicitly to ensure reliable measurement across JVMs
             JsonNode usedNode = webClient.get()
-                    .uri(baseUrl + "/actuator/metrics/jvm.memory.used")
+                    .uri(baseUrl + "/actuator/metrics/jvm.memory.used?tag=area:heap")
                     .retrieve()
                     .bodyToMono(JsonNode.class)
-                    .timeout(Duration.ofMillis(2000))
-                    .onErrorReturn(null)
+                    .timeout(TIMEOUT)
                     .block();
 
             JsonNode maxNode = webClient.get()
-                    .uri(baseUrl + "/actuator/metrics/jvm.memory.max")
+                    .uri(baseUrl + "/actuator/metrics/jvm.memory.max?tag=area:heap")
                     .retrieve()
                     .bodyToMono(JsonNode.class)
-                    .timeout(Duration.ofMillis(2000))
-                    .onErrorReturn(null)
+                    .timeout(TIMEOUT)
                     .block();
 
-            if (usedNode != null && maxNode != null) {
-                double used = usedNode.get("measurements").get(0).get("value").asDouble(0.0);
-                double max = maxNode.get("measurements").get(0).get("value").asDouble(1.0);
-                if (max > 0) {
-                    double percent = (used / max) * 100.0;
-                    return Math.round(percent * 100.0) / 100.0;
+            double used = 0.0;
+            double max = 0.0;
+
+            if (usedNode != null && usedNode.has("measurements") && !usedNode.get("measurements").isEmpty()) {
+                used = usedNode.get("measurements").get(0).get("value").asDouble(0.0);
+            }
+
+            if (maxNode != null && maxNode.has("measurements") && !maxNode.get("measurements").isEmpty()) {
+                max = maxNode.get("measurements").get(0).get("value").asDouble(0.0);
+            }
+
+            // Fallback: If heap max is negative (unrestricted) or zero, query jvm.memory.committed
+            if (max <= 0.0) {
+                JsonNode committedNode = webClient.get()
+                        .uri(baseUrl + "/actuator/metrics/jvm.memory.committed?tag=area:heap")
+                        .retrieve()
+                        .bodyToMono(JsonNode.class)
+                        .timeout(TIMEOUT)
+                        .block();
+                if (committedNode != null && committedNode.has("measurements") && !committedNode.get("measurements").isEmpty()) {
+                    max = committedNode.get("measurements").get(0).get("value").asDouble(0.0);
                 }
             }
-        } catch (Exception ignored) {
+
+            if (used > 0.0 && max > 0.0) {
+                double percent = (used / max) * 100.0;
+                if (percent > 100.0) percent = 100.0;
+                return Math.round(percent * 100.0) / 100.0;
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch jvm memory for {}: {}", serviceName, e.getMessage());
         }
         return 0.0;
     }
@@ -206,50 +255,99 @@ public class TelemetryCollectorService {
     private HttpMetrics fetchHttpMetrics(String serviceName, String baseUrl) {
         HttpMetrics result = new HttpMetrics();
         try {
-            JsonNode node = webClient.get()
+            JsonNode baseNode = webClient.get()
                     .uri(baseUrl + "/actuator/metrics/http.server.requests")
                     .retrieve()
                     .bodyToMono(JsonNode.class)
-                    .timeout(Duration.ofMillis(2000))
-                    .onErrorReturn(null)
+                    .timeout(TIMEOUT)
                     .block();
 
-            if (node != null && node.has("measurements")) {
-                long count = 0;
+            if (baseNode != null && baseNode.has("measurements")) {
+                long totalCount = 0;
                 double totalTimeSec = 0.0;
 
-                for (JsonNode m : node.get("measurements")) {
+                for (JsonNode m : baseNode.get("measurements")) {
                     String stat = m.get("statistic").asText("");
                     if ("COUNT".equalsIgnoreCase(stat)) {
-                        count = m.get("value").asLong(0);
+                        totalCount = m.get("value").asLong(0);
                     } else if ("TOTAL_TIME".equalsIgnoreCase(stat)) {
                         totalTimeSec = m.get("value").asDouble(0.0);
                     }
                 }
 
-                // Mean latency in ms
-                if (count > 0) {
-                    result.latencyMs = Math.round((totalTimeSec / count) * 1000.0 * 100.0) / 100.0;
+                // Mean latency in ms = (totalTimeSec / totalCount) * 1000
+                if (totalCount > 0) {
+                    result.latencyMs = Math.round((totalTimeSec / totalCount) * 1000.0 * 100.0) / 100.0;
                 }
 
-                // Request rate calculation
+                // Request rate calculation from delta count between intervals
                 long now = System.currentTimeMillis();
                 Long prevCount = previousRequestCount.get(serviceName);
                 Long prevTime = previousTimestampMillis.get(serviceName);
 
                 if (prevCount != null && prevTime != null && now > prevTime) {
-                    long deltaCount = count - prevCount;
+                    long deltaCount = totalCount - prevCount;
                     if (deltaCount < 0) deltaCount = 0;
                     double deltaSec = (now - prevTime) / 1000.0;
-                    result.requestRate = Math.round((deltaCount / deltaSec) * 100.0) / 100.0;
+                    if (deltaSec > 0.0) {
+                        result.requestRate = Math.round((deltaCount / deltaSec) * 100.0) / 100.0;
+                    }
                 } else {
                     result.requestRate = 0.0;
                 }
 
-                previousRequestCount.put(serviceName, count);
+                previousRequestCount.put(serviceName, totalCount);
                 previousTimestampMillis.put(serviceName, now);
+
+                // Error rate calculation: Check for 5xx errors using available tags
+                long error5xxCount = 0;
+                boolean hasServerErrorTag = false;
+
+                if (baseNode.has("availableTags") && baseNode.get("availableTags").isArray()) {
+                    for (JsonNode tagNode : baseNode.get("availableTags")) {
+                        String tagName = tagNode.get("tag").asText("");
+                        if ("outcome".equalsIgnoreCase(tagName) && tagNode.has("values")) {
+                            for (JsonNode val : tagNode.get("values")) {
+                                if ("SERVER_ERROR".equalsIgnoreCase(val.asText(""))) {
+                                    hasServerErrorTag = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (hasServerErrorTag) {
+                    try {
+                        JsonNode errorNode = webClient.get()
+                                .uri(baseUrl + "/actuator/metrics/http.server.requests?tag=outcome:SERVER_ERROR")
+                                .retrieve()
+                                .bodyToMono(JsonNode.class)
+                                .timeout(TIMEOUT)
+                                .block();
+
+                        if (errorNode != null && errorNode.has("measurements")) {
+                            for (JsonNode em : errorNode.get("measurements")) {
+                                if ("COUNT".equalsIgnoreCase(em.get("statistic").asText(""))) {
+                                    error5xxCount = em.get("value").asLong(0);
+                                    break;
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        log.debug("Error tag query for {} not available: {}", serviceName, e.getMessage());
+                    }
+                }
+
+                if (totalCount > 0 && error5xxCount > 0) {
+                    double errPercent = ((double) error5xxCount / totalCount) * 100.0;
+                    result.errorRate = Math.round(errPercent * 100.0) / 100.0;
+                } else {
+                    result.errorRate = 0.0;
+                }
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            log.warn("Failed to fetch http.server.requests for {}: {}", serviceName, e.getMessage());
         }
         return result;
     }
@@ -258,7 +356,7 @@ public class TelemetryCollectorService {
         try (PrintWriter writer = new PrintWriter(new FileWriter(csvPath, true))) {
             writer.println(telemetry.toCsvRow());
         } catch (IOException e) {
-            log.error("Failed to write telemetry record to CSV: {}", e.getMessage());
+            log.error("Failed to write telemetry record to CSV: {}", e.getMessage(), e);
         }
     }
 

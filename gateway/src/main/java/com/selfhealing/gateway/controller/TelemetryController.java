@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 import java.util.Map;
@@ -23,16 +24,19 @@ public class TelemetryController {
 
     @GetMapping("/latest")
     public Mono<Map<String, ServiceTelemetry>> getLatest() {
-        return Mono.just(telemetryService.getLatestTelemetry());
+        return Mono.fromCallable(telemetryService::getLatestTelemetry)
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     @GetMapping("/history")
     public Mono<List<ServiceTelemetry>> getHistory() {
-        return Mono.just(telemetryService.getHistory());
+        return Mono.fromCallable(telemetryService::getHistory)
+                .subscribeOn(Schedulers.boundedElastic());
     }
 
     @PostMapping("/collect")
     public Mono<List<ServiceTelemetry>> triggerCollection() {
-        return Mono.fromCallable(telemetryService::collectAll);
+        return Mono.fromCallable(telemetryService::collectAll)
+                .subscribeOn(Schedulers.boundedElastic());
     }
 }
