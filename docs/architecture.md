@@ -146,3 +146,22 @@ SPRING CLOUD GATEWAY (port 8080)
   - `GET /gateway/db/healing`: Historical remediation audit records.
   - `GET /gateway/db/anomalies`: Historical ML anomaly predictions.
   - `POST /gateway/db/reset`: Administrative reset/truncation of database tables.
+
+### 9. Thymeleaf Operations Center Dashboard (`Phase 15`)
+- **Single-Pane-of-Glass Operations Management:**
+  - Built into Spring Cloud Gateway (`port 8080`) using reactive **Thymeleaf 3.1**, modern responsive HTML5/CSS3, and non-blocking JavaScript.
+  - Zero external CDN dependencies—runs completely air-gapped and offline with embedded dark-mode operations center styling.
+- **Real-Time Telemetry & Monitoring Cards:**
+  - Visualizes real-time status of all microservices (`order-service`, `payment-service`, `inventory-service`, `api-gateway`, `ml-service`, `relational-db`).
+  - Displays continuous metric gauges (CPU %, Memory MB, Latency ms, Error Rate %, Request Rate req/s).
+  - Displays sliding-window anomaly confirmation progress bars ($K/5$) and discrete health badges (`HEALTHY`, `SUSPECT`, `CONFIRMED_ANOMALY`, `RECOVERING`).
+- **Interactive Chaos Simulation & Testing Console:**
+  - Operators can trigger one-click fault injection (Slow latency, HTTP 500 error surge, JVM heap memory leak, and full reset) directly from the browser to demonstrate closed-loop self-healing during presentations.
+- **Immutable Self-Healing Audit Trail:**
+  - Dynamically renders recent remediation events (`RESTART`, `TRAFFIC_REDIRECTION`, `RATE_LIMIT`), trigger rationale, duration, and post-healing verification status.
+- **REST Endpoints:**
+  - `GET /` & `GET /dashboard`: Thymeleaf HTML operations center view.
+  - `GET /api/dashboard/stats`: Aggregator JSON payload polled every 3s by frontend client.
+  - `POST /api/dashboard/chaos/trigger`: Proxy fault injection to downstream services.
+  - `POST /api/dashboard/healing/trigger`: On-demand manual self-healing invocation.
+  - `POST /api/dashboard/reset`: Global system reset clearing all chaos, anomaly states, healing logs, and database tables.

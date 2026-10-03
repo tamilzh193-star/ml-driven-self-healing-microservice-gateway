@@ -281,3 +281,48 @@ Endpoints under `/gateway/db/*` provide direct access to persisted telemetry tim
   }
 ]
 ```
+
+## Operations Center Dashboard Endpoints (Phase 15)
+
+Endpoints powering the Thymeleaf frontend UI and interactive operator control console.
+
+| Method | Endpoint | Query / Form Params | Description |
+|:---|:---|:---|:---|
+| `GET` | `/` or `/dashboard` | - | Primary Thymeleaf HTML operations center dashboard |
+| `GET` | `/api/dashboard/stats` | - | Aggregator JSON payload containing live microservices, ML status, healing history, DB stats, and KPIs |
+| `POST` | `/api/dashboard/chaos/trigger` | `service`, `type`, `value` | Injects controlled chaos (`slow`, `error`, `memory`, `cpu`, `reset`) into target microservice |
+| `POST` | `/api/dashboard/healing/trigger` | `service` | Triggers manual remediation and verification for target microservice |
+| `POST` | `/api/dashboard/reset` | - | Global system reset (clears all microservice chaos, anomaly states, healing history, and DB tables) |
+
+### Example Response: `GET /api/dashboard/stats`
+```json
+{
+  "timestamp": "2026-10-03T14:57:00.000Z",
+  "services": [
+    {
+      "name": "payment-service",
+      "port": 8082,
+      "health": "UP",
+      "anomalyStatus": "HEALTHY",
+      "windowScore": "0/5",
+      "cpu": 1.15,
+      "memory": 1.7,
+      "latency": 1.44,
+      "errorRate": 0.0,
+      "requestRate": 0.2
+    }
+  ],
+  "infrastructure": [
+    {"name": "api-gateway", "port": 8080, "type": "Routing & Healing", "status": "UP"},
+    {"name": "ml-service", "port": 5000, "type": "Isolation Forest ML", "status": "UP"},
+    {"name": "relational-db", "port": 3306, "type": "H2", "status": "CONNECTED"}
+  ],
+  "kpis": {
+    "totalRemediations": 14,
+    "successfulRecoveries": 14,
+    "healingSuccessRate": 100.0,
+    "mttdTarget": "< 25.0s",
+    "mttrTarget": "< 15.0s"
+  }
+}
+```

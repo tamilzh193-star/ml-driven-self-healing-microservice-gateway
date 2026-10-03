@@ -41,7 +41,7 @@ public class AnomalyConfirmationService {
     /**
      * Processes an incoming ML prediction through the sliding window confirmation state machine.
      */
-    public synchronized void recordEvaluation(MlPredictionResponse prediction) {
+    public void recordEvaluation(MlPredictionResponse prediction) {
         if (!enabled || prediction == null || prediction.getService() == null) {
             return;
         }
@@ -150,7 +150,7 @@ public class AnomalyConfirmationService {
     /**
      * Resets confirmation state for a specific service.
      */
-    public synchronized void resetState(String serviceName) {
+    public void resetState(String serviceName) {
         ServiceAnomalyState state = states.get(serviceName);
         if (state != null) {
             state.reset();
@@ -160,7 +160,7 @@ public class AnomalyConfirmationService {
     /**
      * Resets confirmation states for all services.
      */
-    public synchronized void resetAll() {
+    public void resetAll() {
         for (ServiceAnomalyState s : states.values()) {
             s.reset();
         }

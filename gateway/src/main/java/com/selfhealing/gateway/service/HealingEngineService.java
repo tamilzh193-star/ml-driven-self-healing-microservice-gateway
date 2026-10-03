@@ -105,7 +105,7 @@ public class HealingEngineService {
     /**
      * Executes closed-loop self-healing on a confirmed anomaly.
      */
-    public synchronized HealingAuditRecord healService(ServiceAnomalyState state, boolean forceManual) {
+    public HealingAuditRecord healService(ServiceAnomalyState state, boolean forceManual) {
         String serviceName = state.getServiceName();
         Double anomalyScore = state.getAverageAnomalyScore();
 

@@ -17,6 +17,12 @@ spring:
     init:
       mode: always
       schema-locations: classpath:schema.sql
+  thymeleaf:
+    cache: false
+    mode: HTML
+    encoding: UTF-8
+    prefix: classpath:/templates/
+    suffix: .html
   cloud:
     gateway:
       routes:
