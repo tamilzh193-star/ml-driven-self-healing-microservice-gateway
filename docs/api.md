@@ -39,9 +39,96 @@
 
 ## ML Service (port 5000)
 
-| Method | Endpoint   | Description              |
-|--------|------------|--------------------------|
-| POST   | /predict   | Predict anomaly status   |
+The Machine Learning Service is implemented using Python Flask and serves the trained Isolation Forest anomaly detection model.
+
+| Method | Endpoint | Description |
+|:---|:---|:---|
+| `GET` | `/health` | Service health status and model load verification |
+| `GET` | `/model/info` | Trained model metadata, hyperparameters, and evaluation metrics |
+| `POST` | `/predict` | Ingests telemetry metrics and outputs anomaly prediction (single or batch) |
+
+### 1. `GET /health`
+- **Response (HTTP 200):**
+```json
+{
+  "status": "UP",
+  "service": "ml-service",
+  "model_loaded": true,
+  "scaler_loaded": true,
+  "timestamp": "2026-10-03T14:33:14.281188"
+}
+```
+
+### 2. `GET /model/info`
+- **Response (HTTP 200):**
+```json
+{
+  "algorithm": "IsolationForest",
+  "framework": "scikit-learn",
+  "features": ["cpu", "memory", "latency", "error_rate", "request_rate"],
+  "parameters": {
+    "n_estimators": 100,
+    "contamination": 0.14,
+    "random_state": 42
+  },
+  "evaluation_metrics": {
+    "accuracy": 0.9622,
+    "precision": 0.8843,
+    "recall": 0.8527,
+    "f1_score": 0.8682
+  }
+}
+```
+
+### 3. `POST /predict`
+Evaluates telemetry metrics using the fitted `StandardScaler` and `IsolationForest`.
+
+- **Request Body (Single Service):**
+```json
+{
+  "service": "payment-service",
+  "cpu": 1.80,
+  "memory": 1.30,
+  "latency": 1520.40,
+  "error_rate": 0.0,
+  "request_rate": 1.10
+}
+```
+
+- **Response (HTTP 200 - Anomaly):**
+```json
+{
+  "service": "payment-service",
+  "prediction": "ANOMALY",
+  "is_anomaly": true,
+  "anomaly_score": -0.0461,
+  "timestamp": "2026-10-03T14:35:01.123456",
+  "features": {
+    "cpu": 1.80,
+    "memory": 1.30,
+    "latency": 1520.40,
+    "error_rate": 0.0,
+    "request_rate": 1.10
+  }
+}
+```
+
+- **Request Body (Batch Array):**
+```json
+[
+  {"service": "order-service", "cpu": 1.5, "memory": 1.1, "latency": 2.0, "error_rate": 0.0, "request_rate": 1.5},
+  {"service": "payment-service", "cpu": 1.2, "memory": 1.3, "latency": 1515.0, "error_rate": 0.0, "request_rate": 1.0}
+]
+```
+
+- **Response (HTTP 200 - Array):**
+```json
+[
+  {"service": "order-service", "prediction": "NORMAL", "is_anomaly": false, "anomaly_score": 0.12},
+  {"service": "payment-service", "prediction": "ANOMALY", "is_anomaly": true, "anomaly_score": -0.05}
+]
+```
+
 
 ## Chaos / Fault Injection Endpoints
 
