@@ -5,6 +5,7 @@ import com.selfhealing.gateway.model.ServiceTelemetry;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,9 @@ public class TelemetryCollectorService {
 
     @Value("${telemetry.collection.csv-path:../dataset/telemetry.csv}")
     private String csvPath;
+
+    @Autowired(required = false)
+    private MlClientService mlClientService;
 
     // Track configured service URLs: serviceName -> baseUrl
     private final Map<String, String> targetServices = new LinkedHashMap<>();
@@ -121,6 +125,16 @@ public class TelemetryCollectorService {
 
             appendCsvRecord(telemetry);
         }
+
+        // Phase 10: Dispatch collected telemetry batch to ML Service for anomaly detection
+        if (mlClientService != null && !results.isEmpty()) {
+            try {
+                mlClientService.evaluateBatch(results);
+            } catch (Exception e) {
+                log.warn("Error forwarding telemetry to ML service: {}", e.getMessage());
+            }
+        }
+
         return results;
     }
 

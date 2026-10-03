@@ -61,3 +61,10 @@ telemetry:
     enabled: true
     interval-ms: 5000
     csv-path: ../dataset/telemetry.csv
+
+ml:
+  service:
+    url: ${ML_SERVICE_URL:http://localhost:5000}
+    enabled: ${ML_SERVICE_ENABLED:true}
+    timeout-ms: 3000
+
