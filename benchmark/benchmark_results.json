@@ -1,0 +1,88 @@
+{
+  "timestamp": "2026-10-03T19:44:40.834776",
+  "system": {
+    "gateway_port": 8080,
+    "microservices": [
+      "order-service (8081)",
+      "payment-service (8082)",
+      "inventory-service (8083)"
+    ],
+    "ml_model": "Isolation Forest (scikit-learn, n_estimators=100, contamination=0.14)",
+    "telemetry_interval_sec": 5.0,
+    "sliding_window_size": 5,
+    "confirmation_threshold_k": 3,
+    "cooldown_period_sec": 30.0
+  },
+  "aggregate_metrics": {
+    "mean_time_to_detect_mttd_sec": 8.89,
+    "mean_time_to_recover_mttr_sec": 1.88,
+    "overall_benchmark_success_rate_pct": 100.0,
+    "false_positive_rate_baseline_pct": 0.0,
+    "anti_flapping_filter_accuracy_pct": 100.0,
+    "anti_thrashing_cooldown_success_pct": 100.0
+  },
+  "scenarios": [
+    {
+      "scenario": "Steady-State Baseline",
+      "requests_sent": 24,
+      "false_positive_count": 0,
+      "false_positive_rate_pct": 0.0,
+      "passed": true,
+      "details": "Verified 0 false alarms under normal steady-state traffic."
+    },
+    {
+      "scenario": "Latency Degradation (/chaos/slow)",
+      "target_service": "payment-service",
+      "fault_type": "Slow Response (1600ms delay)",
+      "mttd_seconds": 10.66,
+      "mttr_seconds": 0.1,
+      "selected_action": "TRAFFIC_REDIRECTION",
+      "expected_action": "TRAFFIC_REDIRECTION",
+      "action_status": "RECOVERED",
+      "post_recovery_latency_ms": 10.2,
+      "passed": true,
+      "details": "Target healed using TRAFFIC_REDIRECTION; post-recovery SLA latency verified."
+    },
+    {
+      "scenario": "Error Rate Surge (/chaos/error)",
+      "target_service": "order-service",
+      "fault_type": "HTTP 500 Fault (Active)",
+      "mttd_seconds": 5.89,
+      "mttr_seconds": 0.14,
+      "selected_action": "RESTART",
+      "expected_action": "RESTART",
+      "action_status": "RECOVERED",
+      "post_recovery_error_rate_pct": 0.0,
+      "passed": true,
+      "details": "Target cleared errors via RESTART; verified 0% post-remediation errors."
+    },
+    {
+      "scenario": "Memory Saturation (/chaos/memory)",
+      "target_service": "inventory-service",
+      "fault_type": "JVM Heap Allocation (50MB)",
+      "mttd_seconds": 10.13,
+      "mttr_seconds": 5.39,
+      "selected_action": "RESTART",
+      "expected_action": "RESTART",
+      "action_status": "RECOVERED",
+      "passed": true,
+      "details": "Heap contention remediated through RESTART."
+    },
+    {
+      "scenario": "Anti-Flapping & Cooldown Protection",
+      "transient_spike_suppressed": true,
+      "cooldown_protection_active": true,
+      "cooldown_result": "SKIPPED_COOLDOWN",
+      "passed": true,
+      "details": "Transient anomaly suppressed without flapping; 30s cooldown prevented redundant action."
+    },
+    {
+      "scenario": "Comparative Resilience Analysis",
+      "unhealed_availability_pct": 0.0,
+      "self_healed_availability_pct": 100.0,
+      "availability_improvement_pct": 100.0,
+      "passed": true,
+      "details": "Self-healing improved service availability by +100.0% under active fault."
+    }
+  ]
+}
