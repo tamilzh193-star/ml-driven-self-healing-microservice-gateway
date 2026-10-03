@@ -1,0 +1,637 @@
+{
+  "info": {
+    "_postman_id": "c7a8b9e0-1234-5678-9abc-def012345678",
+    "name": "ML-Driven Self-Healing Microservice Cloud Gateway API",
+    "description": "Comprehensive Postman test collection for the Self-Healing Cloud Gateway, microservices, Isolation Forest ML daemon, relational persistence, and operations center dashboard.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Microservice Business Routes",
+      "item": [
+        {
+          "name": "Order Service - List Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{gateway_url}}/orders", "host": ["{{gateway_url}}"], "path": ["orders"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response is JSON array', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Order Service - Create Order",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Tamil\",\n  \"item\": \"Laptop\",\n  \"quantity\": 1,\n  \"price\": 75000.0\n}"
+            },
+            "url": { "raw": "{{gateway_url}}/orders", "host": ["{{gateway_url}}"], "path": ["orders"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 or 201', function () { pm.expect([200, 201]).to.include(pm.response.code); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Payment Service - List Payments",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{gateway_url}}/payments", "host": ["{{gateway_url}}"], "path": ["payments"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response is JSON array', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inventory Service - List Inventory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{gateway_url}}/inventory", "host": ["{{gateway_url}}"], "path": ["inventory"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 OK', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Response is JSON array', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Gateway Health & Telemetry",
+      "item": [
+        {
+          "name": "Gateway Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{gateway_url}}/gateway/health", "host": ["{{gateway_url}}"], "path": ["gateway", "health"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Gateway is UP', function () { pm.expect(pm.response.json().status).to.eql('UP'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Actuator Health Composite",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{gateway_url}}/actuator/health", "host": ["{{gateway_url}}"], "path": ["actuator", "health"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Components present', function () { pm.expect(pm.response.json().components).to.be.an('object'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Latest Telemetry Map",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{gateway_url}}/gateway/telemetry/latest", "host": ["{{gateway_url}}"], "path": ["gateway", "telemetry", "latest"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Contains target services', function () { pm.expect(pm.response.json()).to.have.property('payment-service'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Trigger Immediate Telemetry Collection",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{gateway_url}}/gateway/telemetry/collect", "host": ["{{gateway_url}}"], "path": ["gateway", "telemetry", "collect"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Returns collected telemetry list', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Machine Learning Service",
+      "item": [
+        {
+          "name": "ML Service Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{ml_url}}/health", "host": ["{{ml_url}}"], "path": ["health"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Model loaded', function () { pm.expect(pm.response.json().model_loaded).to.be.true; });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "ML Service Model Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{ml_url}}/model/info", "host": ["{{ml_url}}"], "path": ["model", "info"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Algorithm is IsolationForest', function () { pm.expect(pm.response.json().algorithm).to.eql('IsolationForest'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "ML Predict Normal Sample",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"service\": \"order-service\",\n  \"cpu\": 0.35,\n  \"memory\": 1.45,\n  \"latency\": 1.2,\n  \"error_rate\": 0.0,\n  \"request_rate\": 0.5\n}"
+            },
+            "url": { "raw": "{{ml_url}}/predict", "host": ["{{ml_url}}"], "path": ["predict"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Prediction is NORMAL', function () { pm.expect(pm.response.json().prediction).to.eql('NORMAL'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "ML Predict Anomaly Sample",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"service\": \"payment-service\",\n  \"cpu\": 4.85,\n  \"memory\": 1.95,\n  \"latency\": 1650.0,\n  \"error_rate\": 60.0,\n  \"request_rate\": 5.5\n}"
+            },
+            "url": { "raw": "{{ml_url}}/predict", "host": ["{{ml_url}}"], "path": ["predict"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Prediction is ANOMALY', function () { pm.expect(pm.response.json().prediction).to.eql('ANOMALY'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Gateway ML Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{gateway_url}}/gateway/ml/status", "host": ["{{gateway_url}}"], "path": ["gateway", "ml", "status"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Connected', function () { pm.expect(pm.response.json().status).to.eql('UP'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Anomaly Confirmation State Machine",
+      "item": [
+        {
+          "name": "Get All Anomaly Confirmation States",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{gateway_url}}/gateway/anomaly/status", "host": ["{{gateway_url}}"], "path": ["gateway", "anomaly", "status"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Has payment-service state', function () { pm.expect(pm.response.json()).to.have.property('payment-service'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Confirmed Anomalies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{gateway_url}}/gateway/anomaly/confirmed", "host": ["{{gateway_url}}"], "path": ["gateway", "anomaly", "confirmed"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Returns Array', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reset All Anomaly Confirmation States",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{gateway_url}}/gateway/anomaly/reset", "host": ["{{gateway_url}}"], "path": ["gateway", "anomaly", "reset"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Autonomous Healing Engine",
+      "item": [
+        {
+          "name": "Get Healing Engine Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{gateway_url}}/gateway/healing/status", "host": ["{{gateway_url}}"], "path": ["gateway", "healing", "status"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Has activeRedirections', function () { pm.expect(pm.response.json()).to.have.property('activeRedirections'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Healing Audit History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{gateway_url}}/gateway/healing/history", "host": ["{{gateway_url}}"], "path": ["gateway", "healing", "history"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Returns Array', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Trigger Manual Healing on Service",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/gateway/healing/trigger/payment-service?force=true",
+              "host": ["{{gateway_url}}"],
+              "path": ["gateway", "healing", "trigger", "payment-service"],
+              "query": [{ "key": "force", "value": "true" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Has actionStatus', function () { pm.expect(pm.response.json()).to.have.property('actionStatus'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reset Healing Engine States",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{gateway_url}}/gateway/healing/reset", "host": ["{{gateway_url}}"], "path": ["gateway", "healing", "reset"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Relational Persistence Layer",
+      "item": [
+        {
+          "name": "Get Database Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{gateway_url}}/gateway/db/status", "host": ["{{gateway_url}}"], "path": ["gateway", "db", "status"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Database connected', function () { pm.expect(pm.response.json().databaseStatus).to.eql('CONNECTED'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Query Persisted Telemetry",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/gateway/db/telemetry?service=order-service&limit=5",
+              "host": ["{{gateway_url}}"],
+              "path": ["gateway", "db", "telemetry"],
+              "query": [
+                { "key": "service", "value": "order-service" },
+                { "key": "limit", "value": "5" }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Returns Array', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Query Persisted Healing Audits",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{gateway_url}}/gateway/db/healing?limit=5", "host": ["{{gateway_url}}"], "path": ["gateway", "db", "healing"], "query": [{ "key": "limit", "value": "5" }] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Returns Array', function () { pm.expect(pm.response.json()).to.be.an('array'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. Chaos Injection & Resilience Testing",
+      "item": [
+        {
+          "name": "Inject Slow Response on Payment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/payment-service/chaos/slow?delayMs=1600",
+              "host": ["{{gateway_url}}"],
+              "path": ["payment-service", "chaos", "slow"],
+              "query": [{ "key": "delayMs", "value": "1600" }]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Chaos is active', function () { pm.expect(pm.response.json().slowActive).to.be.true; });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reset Chaos on Payment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{gateway_url}}/payment-service/chaos/reset", "host": ["{{gateway_url}}"], "path": ["payment-service", "chaos", "reset"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Chaos is cleared', function () { pm.expect(pm.response.json().slowActive).to.be.false; });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "8. Operations Center Dashboard API",
+      "item": [
+        {
+          "name": "Dashboard HTML Operations Center",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{gateway_url}}/dashboard", "host": ["{{gateway_url}}"], "path": ["dashboard"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Contains operations center header', function () { pm.expect(pm.response.text()).to.include('Autonomous Self-Healing Cloud Operations Center'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Dashboard Live Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{gateway_url}}/api/dashboard/stats", "host": ["{{gateway_url}}"], "path": ["api", "dashboard", "stats"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Contains services list', function () { pm.expect(pm.response.json().services).to.be.an('array'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Dashboard Global System Reset",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": { "raw": "{{gateway_url}}/api/dashboard/reset", "host": ["{{gateway_url}}"], "path": ["api", "dashboard", "reset"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('Status is SUCCESS', function () { pm.expect(pm.response.json().status).to.eql('SUCCESS'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

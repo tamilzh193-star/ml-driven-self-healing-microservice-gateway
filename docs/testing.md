@@ -69,3 +69,46 @@ Quantifies the percentage of confirmed degradation events autonomously resolved 
 ### Availability Gain ($\Delta A$)
 $$\Delta A = A_{\text{self-healed}} - A_{\text{unhealed}}$$
 Quantifies the availability delta achieved by autonomous self-healing over an unhealed failure state.
+
+---
+
+## 4. Performance & Load Testing Suite (Phase 16)
+
+Phase 16 introduces industrial-grade API integration testing and concurrent load performance benchmarking using **Postman Collection v2.1.0** and **Apache JMeter 5.x / Python multi-threaded runner**.
+
+### 4.1 Postman API Collection & Environment
+- **Collection Artifact**: [`tests/postman/self_healing_cloud_postman_collection.json`](file:///e:/self-healing-cloud%20project/tests/postman/self_healing_cloud_postman_collection.json)
+- **Environment Configuration**: [`tests/postman/self_healing_cloud_environment.json`](file:///e:/self-healing-cloud%20project/tests/postman/self_healing_cloud_environment.json)
+- **Test Organization (8 Modular Folders)**:
+  1. `1. Microservice Business Routes`: Validates order creation, payment retrieval, and inventory state through Gateway routes.
+  2. `2. Gateway Health & Telemetry`: Actuator health and scheduled 5-second telemetry snapshots.
+  3. `3. Machine Learning Service`: Direct Flask Isolation Forest predictions and multidimensional feature inferences.
+  4. `4. Anomaly Confirmation State Machine`: Real-time sliding window states, anti-flapping filters, and confirmed queue inspect.
+  5. `5. Autonomous Healing Engine`: Remediation execution, cooldown state queries, and manual trigger controls.
+  6. `6. Relational Persistence Layer`: Database table status, historical telemetry, and persistent audit logs.
+  7. `7. Chaos Injection & Resilience Testing`: Injection of latency, error codes, and memory contention across services.
+  8. `8. Operations Center Dashboard API`: Live JSON stats aggregator (`/api/dashboard/stats`) and UI action handlers.
+
+### 4.2 Apache JMeter Load Test Plan (`self_healing_load_test.jmx`)
+- **JMX Artifact**: [`tests/jmeter/self_healing_load_test.jmx`](file:///e:/self-healing-cloud%20project/tests/jmeter/self_healing_load_test.jmx)
+- **Standalone Runner**: [`tests/jmeter/run_load_test.py`](file:///e:/self-healing-cloud%20project/tests/jmeter/run_load_test.py)
+- **Benchmark Thread Groups**:
+  - **Thread Group 1 (Baseline Traffic)**: 10 concurrent threads, 10 loops per thread (100 total requests) against `/orders`, `/inventory`, `/payments`.
+  - **Thread Group 2 (Surge Stress Traffic)**: 20 concurrent threads, 15 loops per thread (300 total requests) generating mixed GET/POST payloads.
+  - **Thread Group 3 (Operational & Telemetry Load)**: 5 concurrent threads executing high-frequency telemetry, anomaly state, and dashboard stats queries.
+
+### 4.3 Empirical Performance Benchmark Results
+
+| Metric | Baseline Load (TG1) | Surge Stress (TG2) | Telemetry Queries (TG3) |
+| :--- | :--- | :--- | :--- |
+| **Concurrency** | 10 workers | 20 workers | 5 workers |
+| **Total Requests** | 100 | 300 | 50 |
+| **Throughput (TPS)** | **195.0 req/s** | **147.41 req/s** | **59.88 req/s** |
+| **Success Rate** | **100.0%** (100/100) | **100.0%** (300/300) | **100.0%** (50/50) |
+| **Average Latency** | **24.31 ms** | **32.53 ms** | **69.79 ms** |
+| **p50 (Median) Latency**| **15.94 ms** | **17.86 ms** | **6.46 ms** |
+| **p90 Latency** | **49.23 ms** | **51.79 ms** | **360.90 ms** |
+| **p95 Latency** | **89.68 ms** | **78.06 ms** | **413.94 ms** |
+| **p99 Latency** | **162.76 ms** | **505.30 ms** | **483.56 ms** |
+| **HTTP Status Breakdown**| 100x 200 OK | 220x 200 OK, 80x 201 Created | 50x 200 OK |
+
