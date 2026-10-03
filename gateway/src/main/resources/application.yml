@@ -76,4 +76,12 @@ anomaly:
     consecutive-required: 3
     recovery-cycles: 2
 
+healing:
+  engine:
+    enabled: ${HEALING_ENGINE_ENABLED:true}
+    cooldown-seconds: 30
+    max-retries: 3
+    verification-delay-ms: 2500
+
+
 

@@ -96,5 +96,38 @@ SPRING CLOUD GATEWAY (port 8080)
   - `GET /gateway/anomaly/confirmed`: Microservices currently confirmed anomalous for autonomous recovery dispatch.
   - `POST /gateway/anomaly/reset`: Administrative reset of state machines and history windows.
 
+### 7. Autonomous Healing Engine (`Phase 12`)
+- **Closed-Loop Healing Flow:**
+  ```
+  CONFIRMED_ANOMALY (from Phase 11)
+          ↓
+  HealingEngineService
+          ↓
+  RemediationStrategySelector (Rule-based Decision)
+          ├── High error rate / memory saturation / DOWN -> RESTART
+          ├── High latency exceeding SLA (> 800ms) -> TRAFFIC_REDIRECTION
+          └── Traffic surge / CPU contention -> RATE_LIMIT
+          ↓
+  RemediationExecutionService & SelfHealingRemediationFilter
+          ↓
+  Post-Remediation Recovery Verification (Actuator health + business latency probe)
+          ↓
+  State Transition (RECOVERED -> reset to HEALTHY, or FAILED_RECOVERY)
+          ↓
+  Immutable Healing Audit Trail (Logged for Phase 13 MySQL persistence)
+  ```
+- **Anti-Thrashing Cooldown:** Remediation actions are followed by a configurable cooldown (default: 30 seconds) suppressing redundant actions (`SKIPPED_COOLDOWN`).
+- **Maximum Retry Protection:** Prevents endless recovery loops by capping attempts (default: 3 retries); services failing beyond this limit transition to `MAX_RETRIES_EXCEEDED` / `CRITICAL`.
+- **Runtime Remediation Enforcers:**
+  - `RESTART`: Issues recovery reset to clear faults and reboot service state.
+  - `TRAFFIC_REDIRECTION`: `SelfHealingRemediationFilter` intercepts requests to the degraded route and returns graceful fallback responses (`FALLBACK_REDIRECTION`) until verified healthy.
+  - `RATE_LIMIT`: Throttles burst traffic, shedding load with HTTP 429 (`TOO_MANY_REQUESTS`) to protect downstream microservices from cascading failure.
+- Endpoints:
+  - `GET /gateway/healing/status`: Active redirections, rate limits, cooldowns, and retry counters.
+  - `GET /gateway/healing/history`: Immutable audit trail of all autonomous recovery executions.
+  - `POST /gateway/healing/trigger/{serviceName}`: Administrative on-demand healing trigger.
+  - `POST /gateway/healing/reset`: Administrative reset of engine states, cooldowns, and audit logs.
+
+
 
 

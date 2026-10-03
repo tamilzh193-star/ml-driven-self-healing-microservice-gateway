@@ -184,4 +184,51 @@ Only `CONFIRMED_ANOMALY` states trigger autonomous self-healing in Phase 12.
 }
 ```
 
+## Autonomous Healing Endpoints (port 8080)
+
+The Autonomous Healing Engine consumes confirmed anomalies from Phase 11, selects targeted remediation strategies (`RESTART`, `TRAFFIC_REDIRECTION`, `RATE_LIMIT`), enforces anti-thrashing cooldowns, verifies post-healing recovery, and maintains an immutable audit trail.
+
+| Method | Endpoint | Description |
+|:---|:---|:---|
+| `GET` | `/gateway/healing/status` | Current status of active traffic redirections, rate limits, cooldowns, and retry counts |
+| `GET` | `/gateway/healing/history` | Audit log of all autonomous remediation actions and recovery verifications |
+| `POST` | `/gateway/healing/trigger/{serviceName}` | Manually triggers closed-loop self-healing on a specific service (with `force` flag) |
+| `POST` | `/gateway/healing/reset` | Resets all active remediation states, cooldowns, retry counts, and audit logs |
+
+### Example Response: `GET /gateway/healing/status`
+```json
+{
+  "activeRedirections": [],
+  "activeRateLimits": {},
+  "activeCooldowns": {
+    "payment-service": "2026-10-03T18:55:00.000Z"
+  },
+  "retryCounts": {
+    "payment-service": 0
+  },
+  "totalAuditRecords": 1
+}
+```
+
+### Example Audit Record: `GET /gateway/healing/history`
+```json
+[
+  {
+    "id": "c1f7b0a2-8921-4f93-b271-97b744d0149f",
+    "serviceName": "payment-service",
+    "actionType": "TRAFFIC_REDIRECTION",
+    "triggerReason": "Severe latency degradation (1607.8 ms) exceeding SLA; activating traffic redirection and fallback mode",
+    "anomalyScore": -0.0695,
+    "attemptCount": 1,
+    "timestamp": "2026-10-03T18:53:20.123Z",
+    "actionStatus": "RECOVERED",
+    "recoveryStatus": "RECOVERED",
+    "recoveryDetails": "Service 'payment-service' verified healthy: /actuator/health is UP and probe responded within SLA",
+    "cooldownUntil": "2026-10-03T18:53:50.123Z",
+    "executionDurationMs": 15
+  }
+]
+```
+
+
 

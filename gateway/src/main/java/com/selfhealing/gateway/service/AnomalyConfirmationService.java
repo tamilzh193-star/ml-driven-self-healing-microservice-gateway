@@ -32,6 +32,10 @@ public class AnomalyConfirmationService {
     @Value("${anomaly.confirmation.recovery-cycles:2}")
     private int recoveryCycles;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    @org.springframework.context.annotation.Lazy
+    private HealingEngineService healingEngineService;
+
     private final Map<String, ServiceAnomalyState> states = new ConcurrentHashMap<>();
 
     /**
@@ -109,6 +113,14 @@ public class AnomalyConfirmationService {
         }
 
         state.setStatus(nextStatus);
+
+        if (nextStatus == AnomalyStatus.CONFIRMED_ANOMALY && healingEngineService != null) {
+            try {
+                healingEngineService.healService(state, false);
+            } catch (Exception e) {
+                log.error("Failed to execute autonomous healing for service {}: {}", serviceName, e.getMessage());
+            }
+        }
     }
 
     /**
