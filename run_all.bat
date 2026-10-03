@@ -48,7 +48,7 @@ echo Waiting 6 seconds for microservices to initialize before Gateway startup...
 timeout /t 6 /nobreak >nul
 
 echo [5/5] Launching Spring Cloud API Gateway & Dashboard (Port 8080)...
-start "API Gateway & Operations Center [8080]" cmd /k "cd /d %~dp0 && java -jar gateway\target\gateway-1.0.0.jar"
+start "API Gateway & Operations Center [8080]" cmd /k "cd /d %~dp0gateway && java -jar target\gateway-1.0.0.jar"
 
 echo.
 echo ==============================================================================

@@ -20,7 +20,7 @@ SERVICES = [
         "port": 5000,
         "url": "http://localhost:5000/health",
         "expected_field": "status",
-        "expected_value": "HEALTHY"
+        "expected_value": "UP"
     },
     {
         "name": "Order Business Service",

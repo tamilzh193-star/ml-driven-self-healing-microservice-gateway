@@ -44,8 +44,7 @@ echo "Waiting 6 seconds for microservices to initialize..."
 sleep 6
 
 echo "[5/5] Launching Spring Cloud API Gateway & Dashboard (Port 8080)..."
-java -jar gateway/target/gateway-1.0.0.jar > logs/gateway.log 2>&1 &
-echo $! > logs/gateway.pid
+(cd gateway && java -jar target/gateway-1.0.0.jar > ../logs/gateway.log 2>&1 & echo $! > ../logs/gateway.pid)
 
 echo "Waiting for cluster services to report healthy..."
 python3 scripts/verify_cluster.py --wait --timeout-sec 60
