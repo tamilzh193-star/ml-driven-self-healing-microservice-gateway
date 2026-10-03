@@ -45,6 +45,9 @@ public class MlClientService {
     @Autowired(required = false)
     private AnomalyConfirmationService anomalyConfirmationService;
 
+    @Autowired(required = false)
+    private DatabasePersistenceService databasePersistenceService;
+
     public MlClientService() {
         this.webClient = WebClient.builder()
                 .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(2 * 1024 * 1024))
@@ -145,6 +148,14 @@ public class MlClientService {
                             anomalyConfirmationService.recordEvaluation(res);
                         } catch (Exception e) {
                             log.error("Failed to update anomaly confirmation for {}: {}", res.getService(), e.getMessage());
+                        }
+                    }
+
+                    if (databasePersistenceService != null) {
+                        try {
+                            databasePersistenceService.persistAnomalyPredictionAsync(res).subscribe();
+                        } catch (Exception e) {
+                            log.debug("Failed to async persist prediction: {}", e.getMessage());
                         }
                     }
 

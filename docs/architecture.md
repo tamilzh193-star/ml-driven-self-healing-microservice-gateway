@@ -128,6 +128,21 @@ SPRING CLOUD GATEWAY (port 8080)
   - `POST /gateway/healing/trigger/{serviceName}`: Administrative on-demand healing trigger.
   - `POST /gateway/healing/reset`: Administrative reset of engine states, cooldowns, and audit logs.
 
-
-
-
+### 8. Relational Persistence Layer (`Phase 13`)
+- **Dual-Mode Persistence Architecture:**
+  - Designed for enterprise persistence in MySQL (production default port `3306`) with zero-configuration embedded H2 (`MODE=MySQL`) fallback.
+  - Eliminates external database boot barriers while ensuring production schema compatibility (`telemetry_records`, `anomaly_predictions`, `healing_audit_logs`).
+  - Configured with resilient HikariCP connection pooling (`initialization-fail-timeout: -1`), guaranteeing the Gateway boots up even if the relational database is temporarily offline.
+- **Reactive Safety & Non-Blocking Netty Event Loops:**
+  - Spring Cloud Gateway runs on reactive Project Reactor Netty. Synchronous JDBC blocking calls on Netty reactor threads lead to event loop starvation and gateway lockups.
+  - `DatabasePersistenceService` schedules all synchronous JDBC inserts and reads onto `Schedulers.boundedElastic()`, ensuring reactive request routing is never hindered.
+- **Schema & Tables:**
+  - `telemetry_records`: Records timestamp, service, CPU, memory, latency, error rate, request rate, and health status with composite indexes for time-series range queries.
+  - `anomaly_predictions`: Stores ML inference results, raw anomaly scores, and classification (`NORMAL` vs `ANOMALY`).
+  - `healing_audit_logs`: Immutable audit trail of closed-loop remediations (`RESTART`, `TRAFFIC_REDIRECTION`, `RATE_LIMIT`), anomaly scores, attempt counts, execution durations, recovery verification status, and cooldown timestamps.
+- **Persistence Endpoints:**
+  - `GET /gateway/db/status`: Database connection state, driver name, product version, and table row counts.
+  - `GET /gateway/db/telemetry`: Historical telemetry metrics with service filtering and limit pagination.
+  - `GET /gateway/db/healing`: Historical remediation audit records.
+  - `GET /gateway/db/anomalies`: Historical ML anomaly predictions.
+  - `POST /gateway/db/reset`: Administrative reset/truncation of database tables.

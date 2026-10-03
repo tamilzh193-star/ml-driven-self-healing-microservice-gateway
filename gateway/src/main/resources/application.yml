@@ -4,6 +4,19 @@ server:
 spring:
   application:
     name: api-gateway
+  datasource:
+    url: ${MYSQL_URL:jdbc:h2:mem:self_healing_db;DB_CLOSE_DELAY=-1;MODE=MySQL}
+    driver-class-name: ${MYSQL_DRIVER:org.h2.Driver}
+    username: ${MYSQL_USER:sa}
+    password: ${MYSQL_PASSWORD:}
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 3000
+      initialization-fail-timeout: -1
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
   cloud:
     gateway:
       routes:
@@ -82,6 +95,12 @@ healing:
     cooldown-seconds: 30
     max-retries: 3
     verification-delay-ms: 2500
+
+persistence:
+  database:
+    enabled: ${DB_PERSISTENCE_ENABLED:true}
+    batch-size: 50
+
 
 
 

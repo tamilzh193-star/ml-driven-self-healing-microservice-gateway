@@ -55,6 +55,9 @@ public class HealingEngineService {
     @Lazy
     private AnomalyConfirmationService anomalyConfirmationService;
 
+    @Autowired(required = false)
+    private DatabasePersistenceService databasePersistenceService;
+
     // Cooldown map: serviceName -> Instant until which healing is suppressed
     private final Map<String, Instant> cooldownUntilMap = new ConcurrentHashMap<>();
 
@@ -263,6 +266,14 @@ public class HealingEngineService {
             auditHistory.pollLast();
         }
         log.info("[HEALING AUDIT] {}", record);
+
+        if (databasePersistenceService != null) {
+            try {
+                databasePersistenceService.persistHealingAuditAsync(record).subscribe();
+            } catch (Exception e) {
+                log.debug("Database async audit persistence error: {}", e.getMessage());
+            }
+        }
     }
 
     public List<HealingAuditRecord> getAuditHistory() {

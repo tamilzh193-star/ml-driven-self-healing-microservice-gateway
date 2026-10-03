@@ -232,3 +232,52 @@ The Autonomous Healing Engine consumes confirmed anomalies from Phase 11, select
 
 
 
+
+## Relational Persistence Layer Endpoints (Phase 13)
+
+Endpoints under `/gateway/db/*` provide direct access to persisted telemetry time-series, ML predictions, and healing audit logs.
+
+| Method | Endpoint | Query Params | Description |
+|:---|:---|:---|:---|
+| `GET` | `/gateway/db/status` | - | Database connection status, dialect/product info, and current table row counts |
+| `GET` | `/gateway/db/telemetry` | `service` (optional), `limit` (default: 50) | Historical microservice telemetry records retrieved from database |
+| `GET` | `/gateway/db/healing` | `service` (optional), `limit` (default: 50) | Historical autonomous remediation audit logs retrieved from database |
+| `GET` | `/gateway/db/anomalies` | `service` (optional), `limit` (default: 50) | Historical ML anomaly predictions and anomaly scores |
+| `POST` | `/gateway/db/reset` | - | Administrative truncation of all relational database tables |
+
+### Example Response: `GET /gateway/db/status`
+```json
+{
+  "persistenceEnabled": true,
+  "databaseStatus": "CONNECTED",
+  "databaseProductName": "H2",
+  "databaseProductVersion": "2.2.224 (2023-09-17)",
+  "databaseUrl": "jdbc:h2:mem:self_healing_db",
+  "driverName": "H2 JDBC Driver",
+  "telemetryRowCount": 142,
+  "anomalyRowCount": 84,
+  "healingAuditRowCount": 3,
+  "fallbackActive": false
+}
+```
+
+### Example Response: `GET /gateway/db/healing`
+```json
+[
+  {
+    "ID": "3050e60c-6371-4b50-a7fd-1b80dcbef133",
+    "SERVICE_NAME": "payment-service",
+    "ACTION_TYPE": "RESTART",
+    "TRIGGER_REASON": "Sustained anomaly confirmed (score: 0.1009); triggering service restart",
+    "ANOMALY_SCORE": 0.1009,
+    "ATTEMPT_COUNT": 1,
+    "ACTION_STATUS": "RECOVERED",
+    "RECOVERY_STATUS": "RECOVERED",
+    "RECOVERY_DETAILS": "Service 'payment-service' verified healthy: /actuator/health is UP and probe responded within SLA",
+    "COOLDOWN_UNTIL": "2026-10-03T13:51:24.479236900Z",
+    "EXECUTION_DURATION_MS": 1747,
+    "TIMESTAMP": "2026-10-03T13:50:52.725804200Z",
+    "CREATED_AT": "2026-10-03T13:51:01.585+00:00"
+  }
+]
+```

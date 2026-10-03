@@ -39,6 +39,9 @@ public class TelemetryCollectorService {
     @Autowired(required = false)
     private MlClientService mlClientService;
 
+    @Autowired(required = false)
+    private DatabasePersistenceService databasePersistenceService;
+
     // Track configured service URLs: serviceName -> baseUrl
     private final Map<String, String> targetServices = new LinkedHashMap<>();
 
@@ -132,6 +135,15 @@ public class TelemetryCollectorService {
                 mlClientService.evaluateBatch(results);
             } catch (Exception e) {
                 log.warn("Error forwarding telemetry to ML service: {}", e.getMessage());
+            }
+        }
+
+        // Phase 13: Asynchronously persist telemetry batch to relational database
+        if (databasePersistenceService != null && !results.isEmpty()) {
+            try {
+                databasePersistenceService.persistTelemetryBatchAsync(results).subscribe();
+            } catch (Exception e) {
+                log.debug("Database persistence async dispatch error: {}", e.getMessage());
             }
         }
 
