@@ -1,11 +1,11 @@
-# Telemetry Collection
+# Telemetry Collection & Dataset Generation
 
 ## Overview
 
 The **Telemetry Collection Engine** is hosted within the Spring Cloud Gateway (`api-gateway`). It acts as a continuous monitoring agent that periodically polls the Spring Boot Actuator endpoints of all downstream microservices (`order-service`, `payment-service`, and `inventory-service`).
 
 The collected telemetry serves two key purposes:
-1. **Offline Training:** Appended to `dataset/telemetry.csv` to generate the training dataset for the Isolation Forest machine learning model (Phase 7).
+1. **Offline Training:** Saved to `dataset/telemetry.csv` to generate the training dataset for the Isolation Forest machine learning model (Phase 7 & Phase 8).
 2. **Online Anomaly Detection:** Fed into the Python Flask ML Service in real time for autonomous fault detection and healing (Phase 10).
 
 ---
@@ -18,31 +18,46 @@ The collected telemetry serves two key purposes:
 | `service` | Configuration mapping | String | `order-service`, `payment-service`, `inventory-service` | Monitored microservice |
 | `cpu` | `/actuator/metrics/process.cpu.usage` | Double | `value * 100` (%) | JVM process CPU utilization |
 | `memory` | `/actuator/metrics/jvm.memory.used`, `/jvm.memory.max` | Double | `(used / max) * 100` (%) | JVM heap memory utilization |
-| `latency` | `/actuator/metrics/http.server.requests` | Double | `(TOTAL_TIME / COUNT) * 1000` (ms) | Mean HTTP request response time |
+| `latency` | `/actuator/metrics/http.server.requests` & Probe | Double | `(TOTAL_TIME / COUNT) * 1000` (ms) | Mean HTTP request response time |
 | `error_rate` | `/actuator/metrics/http.server.requests` (status 5xx) | Double | `(errors / count) * 100` (%) | Percentage of failed HTTP requests |
 | `request_rate` | `/actuator/metrics/http.server.requests` | Double | `delta(COUNT) / delta(seconds)` (req/sec) | Incoming request throughput |
 | `health_status`| `/actuator/health` | String | `UP` / `DOWN` / `UNKNOWN` | Actuator overall health status |
 
 ---
 
-## CSV Format
+## Dataset Schema & Storage
 
-All observations are stored in `dataset/telemetry.csv` with the header:
+All observations are stored under `dataset/`:
+
+### 1. `dataset/telemetry.csv` (Unsupervised ML Training)
 ```csv
 timestamp,service,cpu,memory,latency,error_rate,request_rate,health_status
+2026-10-03T11:15:25.423,order-service,2.21,0.97,10.57,0.00,2.83,UP
 ```
 
-Sample record:
+### 2. `dataset/telemetry_labeled.csv` (Supervised Model Evaluation)
 ```csv
-2026-10-01T21:30:00.123,payment-service,14.50,38.20,12.40,0.00,5.20,UP
+timestamp,service,cpu,memory,latency,error_rate,request_rate,health_status,scenario,is_anomaly
+2026-10-03T11:15:49.369,payment-service,0.88,1.23,1509.86,0.00,1.58,UP,SLOW_LATENCY,1
 ```
 
 ---
 
-## Resilience & Fault-Tolerance
+## Dataset Generation Engine (`dataset/generate_dataset.py`)
 
-- **Timeout Protection:** Actuator queries use a strict 2-second timeout via `WebClient`.
-- **Safe Fallback:** If a service is down or unreachable (e.g., container restart or crash), the collector records `health_status=DOWN`, `cpu=0.0`, `latency=0.0`, and does **not** fail or interrupt gateway traffic.
+The dataset generation script exercises the microservices through automated traffic waves:
+- **Normal Workload:** Concurrent HTTP GET requests across `/orders`, `/payments`, and `/inventory`.
+- **Fault Scenarios:**
+  - `SLOW_LATENCY`: POST `/chaos/slow?delayMs=1500` or `2000`
+  - `ERROR_500`: POST `/chaos/error?rate=100`
+  - `CPU_STRESS`: POST `/chaos/cpu?durationSec=20`
+  - `MEMORY_STRESS`: POST `/chaos/memory?megabytes=60`
+  - `NORMAL`: Periodic resets via POST `/chaos/reset` to capture recovery behavior.
+
+### Execution Command:
+```powershell
+python dataset/generate_dataset.py --target-samples 1500 --clean
+```
 
 ---
 
