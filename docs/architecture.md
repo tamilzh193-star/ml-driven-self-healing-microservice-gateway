@@ -84,4 +84,17 @@ SPRING CLOUD GATEWAY (port 8080)
   - `GET /gateway/ml/history`: Rolling window of recent anomaly predictions.
   - `POST /gateway/ml/evaluate`: On-demand telemetry collection and ML inference trigger.
 
+### 6. Anomaly Confirmation & Anti-Flapping Engine (`Phase 11`)
+- **Anti-Flapping Requirement:** In autonomous cloud environments, single isolated metric spikes (e.g. Stop-The-World JVM GC pauses, network packet retransmissions, brief burst traffic) must never trigger premature recovery or service restarts.
+- **Sliding-Window Hysteresis:** Anomaly status progresses through four discrete states:
+  - `HEALTHY`: Baseline normal operation.
+  - `SUSPECT`: 1 or 2 anomalous cycles detected ($< K$). Transient noise is suppressed; zero recovery actions are dispatched.
+  - `CONFIRMED_ANOMALY`: Sustained degradation confirmed ($\ge 3$ consecutive cycles OR $\ge 3/5$ in sliding window). Escalated to Phase 12 Autonomous Healing Engine.
+  - `RECOVERING`: Fault cleared; service requires consecutive clean cycles before restoring to `HEALTHY`.
+- Endpoints:
+  - `GET /gateway/anomaly/status`: Confirmation state machine details and rolling window inspection.
+  - `GET /gateway/anomaly/confirmed`: Microservices currently confirmed anomalous for autonomous recovery dispatch.
+  - `POST /gateway/anomaly/reset`: Administrative reset of state machines and history windows.
+
+
 

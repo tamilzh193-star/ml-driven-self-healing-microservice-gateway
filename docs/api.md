@@ -148,3 +148,40 @@ Chaos endpoints are provided on each microservice (and routed through the Gatewa
 - **Payment Service:** `http://localhost:8082/chaos/**` (or Gateway: `http://localhost:8080/payment-service/chaos/**`)
 - **Inventory Service:** `http://localhost:8083/chaos/**` (or Gateway: `http://localhost:8080/inventory-service/chaos/**`)
 
+
+## Anomaly Confirmation Endpoints (port 8080)
+
+The Gateway evaluates ML predictions using a sliding-window hysteresis state machine (`HEALTHY` -> `SUSPECT` -> `CONFIRMED_ANOMALY` -> `RECOVERING`).
+Only `CONFIRMED_ANOMALY` states trigger autonomous self-healing in Phase 12.
+
+| Method | Endpoint | Description |
+|:---|:---|:---|
+| `GET` | `/gateway/anomaly/status` | Returns anomaly confirmation state machine status for all microservices |
+| `GET` | `/gateway/anomaly/status/{serviceName}` | Returns sliding-window confirmation state for a specific service |
+| `GET` | `/gateway/anomaly/confirmed` | Returns all microservices currently confirmed anomalous (escalation input to Healing Engine) |
+| `POST` | `/gateway/anomaly/reset` | Resets confirmation sliding windows and state machines for all services |
+| `POST` | `/gateway/anomaly/reset/{serviceName}` | Resets confirmation state machine for a specific service |
+
+### Example Response: `GET /gateway/anomaly/status/payment-service`
+```json
+{
+  "serviceName": "payment-service",
+  "status": "CONFIRMED_ANOMALY",
+  "consecutiveAnomalies": 3,
+  "consecutiveNormal": 0,
+  "anomaliesInWindow": 3,
+  "windowSize": 5,
+  "averageAnomalyScore": -0.0695,
+  "firstAnomalyTimestamp": "2026-10-03T17:51:47.123",
+  "confirmedTimestamp": "2026-10-03T17:51:57.307",
+  "lastEvaluationTimestamp": "2026-10-03T17:51:57.307",
+  "latestPrediction": {
+    "service": "payment-service",
+    "prediction": "ANOMALY",
+    "is_anomaly": true,
+    "anomaly_score": -0.0695
+  }
+}
+```
+
+

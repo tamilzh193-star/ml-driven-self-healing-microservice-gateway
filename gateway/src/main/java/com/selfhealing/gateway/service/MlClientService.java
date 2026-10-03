@@ -5,6 +5,7 @@ import com.selfhealing.gateway.dto.MlPredictionResponse;
 import com.selfhealing.gateway.model.ServiceTelemetry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
@@ -40,6 +41,9 @@ public class MlClientService {
 
     // Rolling history of recent evaluations
     private final Deque<MlPredictionResponse> history = new ConcurrentLinkedDeque<>();
+
+    @Autowired(required = false)
+    private AnomalyConfirmationService anomalyConfirmationService;
 
     public MlClientService() {
         this.webClient = WebClient.builder()
@@ -134,6 +138,14 @@ public class MlClientService {
                     history.addLast(res);
                     while (history.size() > MAX_HISTORY) {
                         history.pollFirst();
+                    }
+
+                    if (anomalyConfirmationService != null) {
+                        try {
+                            anomalyConfirmationService.recordEvaluation(res);
+                        } catch (Exception e) {
+                            log.error("Failed to update anomaly confirmation for {}: {}", res.getService(), e.getMessage());
+                        }
                     }
 
                     if (Boolean.TRUE.equals(res.getIsAnomaly())) {

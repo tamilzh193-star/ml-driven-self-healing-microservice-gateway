@@ -68,3 +68,12 @@ ml:
     enabled: ${ML_SERVICE_ENABLED:true}
     timeout-ms: 3000
 
+anomaly:
+  confirmation:
+    enabled: ${ANOMALY_CONFIRMATION_ENABLED:true}
+    window-size: 5
+    threshold-count: 3
+    consecutive-required: 3
+    recovery-cycles: 2
+
+
