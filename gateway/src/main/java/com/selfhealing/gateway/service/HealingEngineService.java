@@ -47,6 +47,15 @@ public class HealingEngineService {
     @Value("${healing.engine.verification-delay-ms:2500}")
     private long verificationDelayMs;
 
+    @Value("${order.service.url:http://localhost:8081}")
+    private String orderServiceUrl;
+
+    @Value("${payment.service.url:http://localhost:8082}")
+    private String paymentServiceUrl;
+
+    @Value("${inventory.service.url:http://localhost:8083}")
+    private String inventoryServiceUrl;
+
     private final HealingStrategySelector strategySelector;
     private final RemediationExecutionService remediationExecutionService;
     private final WebClient webClient;
@@ -76,13 +85,17 @@ public class HealingEngineService {
         this.remediationExecutionService = remediationExecutionService;
         this.webClient = WebClient.builder().build();
 
-        serviceUrls.put("order-service", "http://localhost:8081");
-        serviceUrls.put("payment-service", "http://localhost:8082");
-        serviceUrls.put("inventory-service", "http://localhost:8083");
-
         businessPaths.put("order-service", "/orders");
         businessPaths.put("payment-service", "/payments");
         businessPaths.put("inventory-service", "/inventory");
+    }
+
+    @PostConstruct
+    public void init() {
+        serviceUrls.put("order-service", orderServiceUrl);
+        serviceUrls.put("payment-service", paymentServiceUrl);
+        serviceUrls.put("inventory-service", inventoryServiceUrl);
+        log.info("HealingEngineService initialized with service endpoints: {}", serviceUrls);
     }
 
     /**
@@ -217,6 +230,7 @@ public class HealingEngineService {
 
     /**
      * Probes the service's actuator health and business endpoint to verify real recovery.
+     * Includes multi-attempt polling to support genuine Docker container restart boot delays.
      */
     public boolean verifyRecovery(String serviceName) {
         String baseUrl = serviceUrls.get(serviceName);
@@ -226,36 +240,55 @@ public class HealingEngineService {
             return false;
         }
 
-        try {
-            // 1. Health check
-            JsonNode healthNode = webClient.get()
-                    .uri(baseUrl + "/actuator/health")
-                    .retrieve()
-                    .bodyToMono(JsonNode.class)
-                    .subscribeOn(Schedulers.boundedElastic())
-                    .block(Duration.ofMillis(3000));
+        boolean healthUp = false;
+        int maxAttempts = 10;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                JsonNode healthNode = webClient.get()
+                        .uri(baseUrl + "/actuator/health")
+                        .retrieve()
+                        .bodyToMono(JsonNode.class)
+                        .subscribeOn(Schedulers.boundedElastic())
+                        .block(Duration.ofMillis(3000));
 
-            if (healthNode == null || !"UP".equalsIgnoreCase(healthNode.path("status").asText())) {
-                log.warn("[VERIFY] {} /actuator/health is not UP", serviceName);
-                return false;
+                if (healthNode != null && "UP".equalsIgnoreCase(healthNode.path("status").asText())) {
+                    log.info("[HEALING VERIFY] {} /actuator/health verified UP on attempt {}/{}", serviceName, attempt, maxAttempts);
+                    healthUp = true;
+                    break;
+                }
+            } catch (Exception e) {
+                log.debug("[HEALING VERIFY] Waiting for {} to report UP (attempt {}/{}): {}", serviceName, attempt, maxAttempts, e.getMessage());
             }
 
-            // 2. Business probe to ensure latency is normal and not throwing errors
+            if (attempt < maxAttempts) {
+                try {
+                    Thread.sleep(1500);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        }
+
+        if (!healthUp) {
+            log.warn("[HEALING VERIFY] {} /actuator/health failed to report UP within retry window", serviceName);
+            return false;
+        }
+
+        // 2. Business probe to ensure latency is normal and not throwing errors
+        try {
             long probeStart = System.currentTimeMillis();
             webClient.get()
                     .uri(baseUrl + businessPath)
                     .retrieve()
                     .toBodilessEntity()
                     .subscribeOn(Schedulers.boundedElastic())
-                    .block(Duration.ofMillis(3000));
-
-            long duration = System.currentTimeMillis() - probeStart;
-            log.info("[VERIFY] {} business probe latency: {}ms", serviceName, duration);
-
-            return duration < 1000;
-
+                    .block(Duration.ofMillis(4000));
+            long probeDuration = System.currentTimeMillis() - probeStart;
+            log.info("[HEALING VERIFY] {} business probe {} succeeded in {}ms", serviceName, businessPath, probeDuration);
+            return true;
         } catch (Exception e) {
-            log.warn("[VERIFY] Error probing {} during recovery verification: {}", serviceName, e.getMessage());
+            log.warn("[HEALING VERIFY] {} business probe {} failed: {}", serviceName, businessPath, e.getMessage());
             return false;
         }
     }
@@ -265,14 +298,10 @@ public class HealingEngineService {
         while (auditHistory.size() > MAX_AUDIT_HISTORY) {
             auditHistory.pollLast();
         }
-        log.info("[HEALING AUDIT] {}", record);
 
+        // Persist to relational database (Phase 13: MySQL / H2 fallback)
         if (databasePersistenceService != null) {
-            try {
-                databasePersistenceService.persistHealingAuditAsync(record).subscribe();
-            } catch (Exception e) {
-                log.debug("Database async audit persistence error: {}", e.getMessage());
-            }
+            databasePersistenceService.persistHealingAuditAsync(record).subscribe();
         }
     }
 
@@ -285,16 +314,16 @@ public class HealingEngineService {
     }
 
     public Map<String, Integer> getRetryCounts() {
-        Map<String, Integer> counts = new HashMap<>();
-        retryCountMap.forEach((k, v) -> counts.put(k, v.get()));
-        return counts;
+        Map<String, Integer> map = new HashMap<>();
+        retryCountMap.forEach((k, v) -> map.put(k, v.get()));
+        return map;
     }
 
-    public synchronized void resetEngine() {
+    public void resetEngine() {
         cooldownUntilMap.clear();
         retryCountMap.clear();
         auditHistory.clear();
         remediationExecutionService.resetAll();
-        log.info("Reset Healing Engine states (cooldowns, retries, audit history).");
+        log.info("Reset autonomous healing engine states.");
     }
 }

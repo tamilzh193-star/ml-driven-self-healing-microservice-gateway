@@ -1,0 +1,168 @@
+# =============================================================================
+# Self-Healing Cloud Microservice Architecture - Production Docker Compose
+# =============================================================================
+# Services:
+#   1. mysql              :3306 - Primary Relational Persistence (MySQL 8.0)
+#   2. ml-service         :5000 - Isolation Forest Inference Daemon (Flask)
+#   3. order-service      :8081 - Business Service (Spring Boot 3.2.5)
+#   4. payment-service    :8082 - Business Service (Spring Boot 3.2.5)
+#   5. inventory-service  :8083 - Business Service (Spring Boot 3.2.5)
+#   6. gateway            :8080 - Spring Cloud Gateway & Autonomous Ops Center
+# =============================================================================
+
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: self-healing-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: self_healing_db
+      MYSQL_USER: clouduser
+      MYSQL_PASSWORD: cloudpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/init-mysql.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - self-healing-net
+
+  ml-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.ml
+    container_name: self-healing-ml-service
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - self-healing-net
+
+  order-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.order
+    container_name: self-healing-order-service
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - SERVER_PORT=8081
+      - SPRING_APPLICATION_NAME=order-service
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - self-healing-net
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.payment
+    container_name: self-healing-payment-service
+    restart: unless-stopped
+    ports:
+      - "8082:8082"
+    environment:
+      - SERVER_PORT=8082
+      - SPRING_APPLICATION_NAME=payment-service
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - self-healing-net
+
+  inventory-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.inventory
+    container_name: self-healing-inventory-service
+    restart: unless-stopped
+    ports:
+      - "8083:8083"
+    environment:
+      - SERVER_PORT=8083
+      - SPRING_APPLICATION_NAME=inventory-service
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - self-healing-net
+
+  gateway:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.gateway
+    container_name: self-healing-gateway
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      ml-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+      payment-service:
+        condition: service_healthy
+      inventory-service:
+        condition: service_healthy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./dataset:/dataset
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker,mysql
+      - MYSQL_URL=jdbc:mysql://mysql:3306/self_healing_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - MYSQL_DRIVER=com.mysql.cj.jdbc.Driver
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=rootpassword
+      - ORDER_SERVICE_URL=http://order-service:8081
+      - PAYMENT_SERVICE_URL=http://payment-service:8082
+      - INVENTORY_SERVICE_URL=http://inventory-service:8083
+      - ML_SERVICE_URL=http://ml-service:5000
+      - DOCKER_CONTAINER_MODE=true
+      - DOCKER_SOCKET_PATH=/var/run/docker.sock
+      - TELEMETRY_CSV_PATH=/dataset/telemetry.csv
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - self-healing-net
+
+volumes:
+  mysql_data:
+
+networks:
+  self-healing-net:
+    driver: bridge

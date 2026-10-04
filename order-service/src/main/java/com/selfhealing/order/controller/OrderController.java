@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 @RestController
-@RequestMapping("/orders")
+@RequestMapping({"/orders", "/order"})
 public class OrderController {
 
     private final Map<Long, Order> orderStore = new ConcurrentHashMap<>();
@@ -28,12 +28,12 @@ public class OrderController {
         orderStore.put(id3, new Order(id3, "Charlie Brown", "Mechanical Keyboard", 1, 85.00, "CREATED"));
     }
 
-    @GetMapping
+    @GetMapping({"", "/"})
     public List<Order> getAllOrders() {
         return new ArrayList<>(orderStore.values());
     }
 
-    @GetMapping("/{id}")
+    @GetMapping({"/{id}", "/{id}/"})
     public ResponseEntity<Order> getOrderById(@PathVariable Long id) {
         Order order = orderStore.get(id);
         if (order != null) {
@@ -42,7 +42,7 @@ public class OrderController {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
 
-    @PostMapping
+    @PostMapping({"", "/"})
     public ResponseEntity<Order> createOrder(@RequestBody Order order) {
         long id = idCounter.getAndIncrement();
         order.setId(id);

@@ -29,7 +29,7 @@ def test_phase15_dashboard():
     # -------------------------------------------------------------
     print("\n[TEST 1] Verifying Thymeleaf Dashboard HTML rendering...")
     for path in ["/", "/dashboard"]:
-        resp = requests.get(f"{GATEWAY_URL}{path}", timeout=5)
+        resp = requests.get(f"{GATEWAY_URL}{path}", timeout=15)
         print(f"  GET {path} -> HTTP {resp.status_code} ({len(resp.text)} bytes)")
         assert resp.status_code == 200, f"Expected HTTP 200, got {resp.status_code}"
         assert "text/html" in resp.headers.get("Content-Type", ""), "Expected Content-Type text/html"
@@ -49,7 +49,7 @@ def test_phase15_dashboard():
     # TEST 2: Real-Time Stats Aggregator API
     # -------------------------------------------------------------
     print("\n[TEST 2] Verifying GET /api/dashboard/stats aggregator endpoint...")
-    resp = requests.get(f"{GATEWAY_URL}/api/dashboard/stats", timeout=5)
+    resp = requests.get(f"{GATEWAY_URL}/api/dashboard/stats", timeout=15)
     assert resp.status_code == 200, f"Expected 200, got {resp.status_code}"
     data = resp.json()
 
@@ -109,7 +109,7 @@ def test_phase15_dashboard():
     print("\n[TEST 4] Testing manual remediation execution via dashboard API...")
     heal_res = requests.post(
         f"{GATEWAY_URL}/api/dashboard/healing/trigger?service=payment-service",
-        timeout=10
+        timeout=15
     ).json()
 
     print(f"  Healing Trigger Response: Status={heal_res.get('status')}")

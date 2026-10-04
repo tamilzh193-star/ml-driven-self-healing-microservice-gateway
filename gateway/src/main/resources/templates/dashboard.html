@@ -693,11 +693,12 @@
                 if (count >= 3) barColor = 'var(--accent-red)';
                 else if (count > 0) barColor = 'var(--accent-amber)';
 
+                const apiPath = s.name === 'order-service' ? '/orders' : (s.name === 'payment-service' ? '/payments' : '/inventory');
                 html += `
                 <div class="service-card">
                     <div class="card-header">
                         <div>
-                            <div class="service-name">${s.name}</div>
+                            <div class="service-name">${s.name} <a href="${apiPath}" target="_blank" style="color: var(--accent-blue); text-decoration: none; font-size: 0.75rem; font-weight: normal; margin-left: 6px;">[Open ${apiPath} &#x2197;]</a></div>
                             <div class="service-port">Port: ${s.port} &bull; Health: ${s.health}</div>
                         </div>
                         <div>${getStatusBadge(s.anomalyStatus)}</div>

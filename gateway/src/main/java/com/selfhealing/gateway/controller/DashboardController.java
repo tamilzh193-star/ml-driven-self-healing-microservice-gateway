@@ -40,6 +40,22 @@ public class DashboardController {
             "inventory-service", 8083
     );
 
+    @Value("${order.service.url:http://localhost:8081}")
+    private String orderServiceUrl;
+
+    @Value("${payment.service.url:http://localhost:8082}")
+    private String paymentServiceUrl;
+
+    @Value("${inventory.service.url:http://localhost:8083}")
+    private String inventoryServiceUrl;
+
+    private String getServiceBaseUrl(String service) {
+        if ("order-service".equalsIgnoreCase(service)) return orderServiceUrl;
+        if ("payment-service".equalsIgnoreCase(service)) return paymentServiceUrl;
+        if ("inventory-service".equalsIgnoreCase(service)) return inventoryServiceUrl;
+        return "http://localhost:" + SERVICE_PORTS.getOrDefault(service, 8081);
+    }
+
     public DashboardController(TelemetryCollectorService telemetryService,
                                AnomalyConfirmationService anomalyService,
                                HealingEngineService healingService,
@@ -87,17 +103,18 @@ public class DashboardController {
             return Mono.just(Map.of("status", "ERROR", "message", "Unknown service: " + service));
         }
 
+        String base = getServiceBaseUrl(service);
         String targetUrl;
         if ("slow".equalsIgnoreCase(type)) {
-            targetUrl = "http://localhost:" + port + "/chaos/slow?delayMs=" + value;
+            targetUrl = base + "/chaos/slow?delayMs=" + value;
         } else if ("error".equalsIgnoreCase(type)) {
-            targetUrl = "http://localhost:" + port + "/chaos/error?active=true";
+            targetUrl = base + "/chaos/error?active=true";
         } else if ("memory".equalsIgnoreCase(type)) {
-            targetUrl = "http://localhost:" + port + "/chaos/memory?megabytes=" + value;
+            targetUrl = base + "/chaos/memory?megabytes=" + value;
         } else if ("cpu".equalsIgnoreCase(type)) {
-            targetUrl = "http://localhost:" + port + "/chaos/cpu?durationSec=" + value;
+            targetUrl = base + "/chaos/cpu?durationSec=" + value;
         } else if ("reset".equalsIgnoreCase(type)) {
-            targetUrl = "http://localhost:" + port + "/chaos/reset";
+            targetUrl = base + "/chaos/reset";
         } else {
             return Mono.just(Map.of("status", "ERROR", "message", "Unknown chaos type: " + type));
         }
@@ -147,9 +164,9 @@ public class DashboardController {
     public Mono<Map<String, Object>> resetSystem() {
         return Mono.fromCallable(() -> {
             // 1. Reset chaos in all microservices
-            for (Map.Entry<String, Integer> entry : SERVICE_PORTS.entrySet()) {
+            for (String sName : SERVICE_PORTS.keySet()) {
                 try {
-                    webClient.post().uri("http://localhost:" + entry.getValue() + "/chaos/reset")
+                    webClient.post().uri(getServiceBaseUrl(sName) + "/chaos/reset")
                             .retrieve().toBodilessEntity().block(Duration.ofSeconds(2));
                 } catch (Exception ignored) {
                 }

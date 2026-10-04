@@ -1,7 +1,7 @@
 # Autonomous Self-Healing Microservice Gateway
 ## Phase 14: Automated Evaluation & Fault Injection Benchmark Report
 
-**Execution Timestamp:** `2026-10-03T19:44:40.834776`  
+**Execution Timestamp:** `2026-10-04T21:51:30.575000`  
 **Architecture:** Spring Cloud Gateway 3.2.5 + scikit-learn Isolation Forest + 3 Microservices  
 
 ---
@@ -10,8 +10,8 @@
 
 | Benchmark Metric | Empirical Value | Target SLA / Standard | Status |
 | :--- | :--- | :--- | :--- |
-| **Mean Time to Detect (MTTD)** | **8.89 s** | $< 25.0$ s (5s telemetry cycle) | **PASS** |
-| **Mean Time to Recover (MTTR)** | **1.88 s** | $< 15.0$ s | **PASS** |
+| **Mean Time to Detect (MTTD)** | **17.76 s** | $< 25.0$ s (5s telemetry cycle) | **PASS** |
+| **Mean Time to Recover (MTTR)** | **2.79 s** | $< 15.0$ s | **PASS** |
 | **Healing Success Rate** | **100.0%** | $\ge 90.0\%$ | **PASS** |
 | **Steady-State False Positive Rate (FPR)** | **0.0%** | $0.0\%$ | **PASS** |
 | **Anti-Flapping Filter Accuracy** | **100.0%** | $100.0\%$ (Transient spikes suppressed) | **PASS** |
@@ -24,9 +24,9 @@
 | # | Scenario | Injected Fault | Remediation Action | MTTD (s) | MTTR (s) | Outcome |
 | :- | :--- | :--- | :--- | :--- | :--- | :--- |
 | 1 | Steady-State Baseline | None (Baseline) | `N/A` | - | - | **PASS** |
-| 2 | Latency Degradation (/chaos/slow) | Slow Response (1600ms delay) | `TRAFFIC_REDIRECTION` | 10.66 s | 0.1 s | **PASS** |
-| 3 | Error Rate Surge (/chaos/error) | HTTP 500 Fault (Active) | `RESTART` | 5.89 s | 0.14 s | **PASS** |
-| 4 | Memory Saturation (/chaos/memory) | JVM Heap Allocation (50MB) | `RESTART` | 10.13 s | 5.39 s | **PASS** |
+| 2 | Latency Degradation (/chaos/slow) | Slow Response (1600ms delay) | `TRAFFIC_REDIRECTION` | 19.19 s | 0.34 s | **PASS** |
+| 3 | Error Rate Surge (/chaos/error) | HTTP 500 Fault (Active) | `RESTART` | 20.72 s | 0.36 s | **PASS** |
+| 4 | Memory Saturation (/chaos/memory) | JVM Heap Allocation (50MB) | `RESTART` | 13.36 s | 7.68 s | **PASS** |
 | 5 | Anti-Flapping & Cooldown Protection | None (Baseline) | `SKIPPED_COOLDOWN` | - | - | **PASS** |
 | 6 | Comparative Resilience Analysis | None (Baseline) | `N/A` | - | - | **PASS** |
 

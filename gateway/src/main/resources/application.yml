@@ -5,17 +5,19 @@ spring:
   application:
     name: api-gateway
   datasource:
+    # Default datasource with H2 development fallback; overridden by Docker / MySQL profiles
     url: ${MYSQL_URL:jdbc:h2:mem:self_healing_db;DB_CLOSE_DELAY=-1;MODE=MySQL}
     driver-class-name: ${MYSQL_DRIVER:org.h2.Driver}
     username: ${MYSQL_USER:sa}
     password: ${MYSQL_PASSWORD:}
     hikari:
       maximum-pool-size: 10
-      connection-timeout: 3000
+      connection-timeout: 30000
       initialization-fail-timeout: -1
   sql:
     init:
       mode: always
+      continue-on-error: true
       schema-locations: classpath:schema.sql
   thymeleaf:
     cache: false
@@ -27,41 +29,61 @@ spring:
     gateway:
       routes:
         - id: order-service
-          uri: http://localhost:8081
+          uri: ${ORDER_SERVICE_URL:http://localhost:8081}
           predicates:
-            - Path=/orders/**
+            - Path=/orders/**, /orders, /order/**, /order
 
         - id: payment-service
-          uri: http://localhost:8082
+          uri: ${PAYMENT_SERVICE_URL:http://localhost:8082}
           predicates:
-            - Path=/payments/**
+            - Path=/payments/**, /payments, /payment/**, /payment
 
         - id: inventory-service
-          uri: http://localhost:8083
+          uri: ${INVENTORY_SERVICE_URL:http://localhost:8083}
           predicates:
-            - Path=/inventory/**
+            - Path=/inventory/**, /inventory, /invetory/**, /invetory
 
-        # Chaos endpoint routes for controlled fault injection via Gateway
-        - id: order-service-chaos
-          uri: http://localhost:8081
+        # Direct service routes (supports /order-service/chaos/** and /order-service/orders, etc.)
+        - id: order-service-direct
+          uri: ${ORDER_SERVICE_URL:http://localhost:8081}
           predicates:
-            - Path=/order-service/chaos/**
+            - Path=/order-service/**
           filters:
             - StripPrefix=1
 
-        - id: payment-service-chaos
-          uri: http://localhost:8082
+        - id: payment-service-direct
+          uri: ${PAYMENT_SERVICE_URL:http://localhost:8082}
           predicates:
-            - Path=/payment-service/chaos/**
+            - Path=/payment-service/**
           filters:
             - StripPrefix=1
 
-        - id: inventory-service-chaos
-          uri: http://localhost:8083
+        - id: inventory-service-direct
+          uri: ${INVENTORY_SERVICE_URL:http://localhost:8083}
           predicates:
-            - Path=/inventory-service/chaos/**
+            - Path=/inventory-service/**
           filters:
             - StripPrefix=1
+
+# Configured Target Downstream Services
+order:
+  service:
+    url: ${ORDER_SERVICE_URL:http://localhost:8081}
+
+payment:
+  service:
+    url: ${PAYMENT_SERVICE_URL:http://localhost:8082}
+
+inventory:
+  service:
+    url: ${INVENTORY_SERVICE_URL:http://localhost:8083}
+
+# Genuine Docker Container Restart Configuration
+docker:
+  container:
+    mode: ${DOCKER_CONTAINER_MODE:false}
+  socket:
+    path: ${DOCKER_SOCKET_PATH:/var/run/docker.sock}
 
 management:
   endpoints:
@@ -79,7 +101,7 @@ telemetry:
   collection:
     enabled: true
     interval-ms: 5000
-    csv-path: ../dataset/telemetry.csv
+    csv-path: ${TELEMETRY_CSV_PATH:../dataset/telemetry.csv}
 
 ml:
   service:
@@ -107,6 +129,38 @@ persistence:
     enabled: ${DB_PERSISTENCE_ENABLED:true}
     batch-size: 50
 
+---
+# Production Docker Environment Profile - Primary MySQL 8.0 Persistence (:3306)
+spring:
+  config:
+    activate:
+      on-profile: docker
+  datasource:
+    url: ${MYSQL_URL:jdbc:mysql://mysql:3306/self_healing_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:rootpassword}
 
+---
+# Local MySQL Profile - Primary MySQL 8.0 Persistence on Localhost (:3306)
+spring:
+  config:
+    activate:
+      on-profile: mysql
+  datasource:
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/self_healing_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:rootpassword}
 
-
+---
+# Standalone Local Development Profile (Embedded H2 Fallback Mode)
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: ${MYSQL_URL:jdbc:h2:mem:self_healing_db;DB_CLOSE_DELAY=-1;MODE=MySQL}
+    driver-class-name: ${MYSQL_DRIVER:org.h2.Driver}
+    username: ${MYSQL_USER:sa}
+    password: ${MYSQL_PASSWORD:}

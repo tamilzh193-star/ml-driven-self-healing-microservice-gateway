@@ -36,6 +36,15 @@ public class TelemetryCollectorService {
     @Value("${telemetry.collection.csv-path:../dataset/telemetry.csv}")
     private String csvPath;
 
+    @Value("${order.service.url:http://localhost:8081}")
+    private String orderServiceUrl;
+
+    @Value("${payment.service.url:http://localhost:8082}")
+    private String paymentServiceUrl;
+
+    @Value("${inventory.service.url:http://localhost:8083}")
+    private String inventoryServiceUrl;
+
     @Autowired(required = false)
     private MlClientService mlClientService;
 
@@ -74,16 +83,16 @@ public class TelemetryCollectorService {
 
     @PostConstruct
     public void init() {
-        targetServices.put("order-service", "http://localhost:8081");
-        targetServices.put("payment-service", "http://localhost:8082");
-        targetServices.put("inventory-service", "http://localhost:8083");
+        targetServices.put("order-service", orderServiceUrl);
+        targetServices.put("payment-service", paymentServiceUrl);
+        targetServices.put("inventory-service", inventoryServiceUrl);
 
         businessEndpoints.put("order-service", "/orders");
         businessEndpoints.put("payment-service", "/payments");
         businessEndpoints.put("inventory-service", "/inventory");
 
         initCsvFile();
-        log.info("TelemetryCollectorService initialized with targets: {}", targetServices.keySet());
+        log.info("TelemetryCollectorService initialized with targets: {}", targetServices);
     }
 
     private synchronized void initCsvFile() {

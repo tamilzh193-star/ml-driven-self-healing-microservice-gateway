@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 @RestController
-@RequestMapping("/inventory")
+@RequestMapping({"/inventory", "/invetory"})
 public class InventoryController {
 
     private final Map<Long, InventoryItem> inventoryStore = new ConcurrentHashMap<>();
@@ -28,12 +28,12 @@ public class InventoryController {
         inventoryStore.put(id3, new InventoryItem(id3, "Mechanical Keyboard", 100, 85.00, "Warehouse-A"));
     }
 
-    @GetMapping
+    @GetMapping({"", "/"})
     public List<InventoryItem> getAllInventory() {
         return new ArrayList<>(inventoryStore.values());
     }
 
-    @GetMapping("/{id}")
+    @GetMapping({"/{id}", "/{id}/"})
     public ResponseEntity<InventoryItem> getInventoryById(@PathVariable Long id) {
         InventoryItem item = inventoryStore.get(id);
         if (item != null) {
@@ -42,7 +42,7 @@ public class InventoryController {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
 
-    @PostMapping("/update")
+    @PostMapping({"/update", "/update/"})
     public ResponseEntity<?> updateInventory(@RequestBody InventoryItem updateRequest) {
         if (updateRequest.getId() == null) {
             return ResponseEntity.badRequest().body("Item ID must be provided");

@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 @RestController
-@RequestMapping("/payments")
+@RequestMapping({"/payments", "/payment"})
 public class PaymentController {
 
     private final Map<Long, Payment> paymentStore = new ConcurrentHashMap<>();
@@ -26,12 +26,12 @@ public class PaymentController {
         paymentStore.put(id2, new Payment(id2, 2L, 51.00, "DEBIT_CARD", "SUCCESS"));
     }
 
-    @GetMapping
+    @GetMapping({"", "/"})
     public List<Payment> getAllPayments() {
         return new ArrayList<>(paymentStore.values());
     }
 
-    @GetMapping("/{id}")
+    @GetMapping({"/{id}", "/{id}/"})
     public ResponseEntity<Payment> getPaymentById(@PathVariable Long id) {
         Payment payment = paymentStore.get(id);
         if (payment != null) {
@@ -40,7 +40,7 @@ public class PaymentController {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
 
-    @PostMapping
+    @PostMapping({"", "/"})
     public ResponseEntity<Payment> processPayment(@RequestBody Payment payment) {
         long id = idCounter.getAndIncrement();
         payment.setId(id);
