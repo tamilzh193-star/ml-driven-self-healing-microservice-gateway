@@ -61,6 +61,13 @@ public class RemediationExecutionService {
     @Value("${docker.socket.path:/var/run/docker.sock}")
     private String dockerSocketPath;
 
+    @Value("${healing.restart.mode:auto}")
+    private String restartMode;
+
+    private final DockerRestartExecutor dockerRestartExecutor;
+    private final SoftResetExecutor softResetExecutor;
+    private final Map<String, RestartResult> lastRestartResults = new ConcurrentHashMap<>();
+
     // Active traffic redirection / gateway protection states: serviceName -> true
     private final Set<String> activeRedirections = ConcurrentHashMap.newKeySet();
 
@@ -71,7 +78,9 @@ public class RemediationExecutionService {
     private final Map<String, AtomicInteger> currentSecondRequests = new ConcurrentHashMap<>();
     private final Map<String, Long> currentSecondTimestamp = new ConcurrentHashMap<>();
 
-    public RemediationExecutionService() {
+    public RemediationExecutionService(DockerRestartExecutor dockerRestartExecutor, SoftResetExecutor softResetExecutor) {
+        this.dockerRestartExecutor = dockerRestartExecutor;
+        this.softResetExecutor = softResetExecutor;
         this.webClient = WebClient.builder().build();
     }
 
@@ -80,8 +89,8 @@ public class RemediationExecutionService {
         targetServiceUrls.put("order-service", orderServiceUrl);
         targetServiceUrls.put("payment-service", paymentServiceUrl);
         targetServiceUrls.put("inventory-service", inventoryServiceUrl);
-        log.info("RemediationExecutionService initialized with endpoints: {}, Docker Mode: {}",
-                targetServiceUrls, isDockerEnvironment());
+        log.info("RemediationExecutionService initialized with endpoints: {}, Docker Available: {}, Restart Mode: {}",
+                targetServiceUrls, isDockerEnvironment(), restartMode);
     }
 
     /**
@@ -121,130 +130,51 @@ public class RemediationExecutionService {
      * Executes a genuine service restart in Docker, or safe development fallback in local dev.
      */
     private boolean executeRestart(String serviceName, String baseUrl) {
-        log.info("[HEALING: RESTART] Initiating restart remediation for service '{}' (baseUrl={})", serviceName, baseUrl);
+        log.info("[HEALING: RESTART] Initiating restart remediation for service '{}' (baseUrl={}, configuredMode={})",
+                serviceName, baseUrl, restartMode);
 
-        if (isDockerEnvironment()) {
-            log.info("[HEALING: DOCKER RESTART] Production Docker environment detected. Triggering genuine container restart for '{}'", serviceName);
-            boolean restarted = restartDockerContainer(serviceName);
-            if (restarted) {
-                activeRedirections.remove(serviceName);
-                activeRateLimits.remove(serviceName);
-                log.info("[HEALING: DOCKER RESTART] Genuine container restart command executed successfully for '{}'", serviceName);
-                return true;
-            }
-            log.warn("[HEALING: DOCKER RESTART] Docker container restart failed or socket unreachable. Falling back to service reset.", serviceName);
+        RestartExecutor executor;
+        if ("docker".equalsIgnoreCase(restartMode)) {
+            executor = dockerRestartExecutor;
+        } else if ("soft".equalsIgnoreCase(restartMode)) {
+            executor = softResetExecutor;
         } else {
-            log.info("[HEALING: RESTART (DEV MODE)] Non-Docker local development environment detected. Executing local safe reset for '{}'", serviceName);
+            // "auto" mode: use Docker if available, otherwise fallback to soft reset
+            if (dockerRestartExecutor.isAvailable()) {
+                executor = dockerRestartExecutor;
+            } else {
+                executor = softResetExecutor;
+            }
         }
 
-        // Local non-Docker development fallback or safety reset
-        try {
-            webClient.post()
-                    .uri(baseUrl + "/chaos/reset")
-                    .retrieve()
-                    .toBodilessEntity()
-                    .subscribeOn(Schedulers.boundedElastic())
-                    .block(Duration.ofMillis(5000));
+        RestartResult result = executor.restart(serviceName, baseUrl);
+        lastRestartResults.put(serviceName, result);
 
+        if (result.isSuccess()) {
             activeRedirections.remove(serviceName);
             activeRateLimits.remove(serviceName);
-
-            log.info("[HEALING: RESTART] Successfully executed recovery reset for service '{}'", serviceName);
+            log.info("[HEALING: RESTART] Restart successfully executed in mode {} for service '{}': {}",
+                    result.getMode(), serviceName, result.getDetails());
             return true;
-        } catch (Exception e) {
-            log.error("[HEALING: RESTART] Failed to reset/restart service '{}': {}", serviceName, e.getMessage());
+        } else {
+            log.error("[HEALING: RESTART] Restart failed in mode {} for service '{}': {}",
+                    result.getMode(), serviceName, result.getDetails());
             return false;
         }
     }
 
-    /**
-     * Genuine Docker container restart implementation via Docker Engine API Unix Socket or Docker CLI.
-     */
+    public RestartResult getLastRestartResult(String serviceName) {
+        return lastRestartResults.get(serviceName);
+    }
+
     public boolean restartDockerContainer(String serviceName) {
-        String containerName = mapServiceToContainer(serviceName);
-        log.info("[DOCKER RESTART] Requesting Docker daemon to restart container '{}'", containerName);
-
-        // 1. Primary mechanism: Native Unix Domain Socket (/var/run/docker.sock)
-        if (restartViaDockerSocket(containerName)) {
-            log.info("[DOCKER RESTART] Container '{}' successfully restarted via Docker Unix Socket API.", containerName);
-            return true;
-        }
-
-        // 2. Secondary fallback: Docker CLI process invocation
-        if (restartViaDockerCli(containerName)) {
-            log.info("[DOCKER RESTART] Container '{}' successfully restarted via Docker CLI.", containerName);
-            return true;
-        }
-
-        return false;
+        String baseUrl = targetServiceUrls.get(serviceName);
+        RestartResult res = dockerRestartExecutor.restart(serviceName, baseUrl);
+        return res.isSuccess();
     }
 
-    /**
-     * Issues container restart HTTP request to Docker Engine daemon over Unix Domain Socket.
-     */
-    private boolean restartViaDockerSocket(String containerName) {
-        File socketFile = new File(dockerSocketPath);
-        if (!socketFile.exists()) {
-            log.debug("[DOCKER SOCKET] Unix domain socket not found at {}", dockerSocketPath);
-            return false;
-        }
-
-        try {
-            UnixDomainSocketAddress address = UnixDomainSocketAddress.of(dockerSocketPath);
-            try (SocketChannel channel = SocketChannel.open(address)) {
-                String httpRequest = "POST /v1.41/containers/" + containerName + "/restart?t=5 HTTP/1.1\r\n" +
-                        "Host: localhost\r\n" +
-                        "Content-Length: 0\r\n" +
-                        "Connection: close\r\n\r\n";
-
-                channel.write(ByteBuffer.wrap(httpRequest.getBytes(StandardCharsets.US_ASCII)));
-
-                ByteBuffer responseBuffer = ByteBuffer.allocate(1024);
-                int bytesRead = channel.read(responseBuffer);
-                if (bytesRead > 0) {
-                    responseBuffer.flip();
-                    String response = StandardCharsets.US_ASCII.decode(responseBuffer).toString();
-                    log.info("[DOCKER SOCKET] Docker daemon response for {}: {}",
-                            containerName, response.lines().findFirst().orElse(""));
-                    return response.contains("204 No Content") || response.contains("200 OK");
-                }
-            }
-        } catch (Exception e) {
-            log.warn("[DOCKER SOCKET] Failed to restart container {} via socket: {}", containerName, e.getMessage());
-        }
-        return false;
-    }
-
-    /**
-     * Issues container restart via local Docker CLI subprocess.
-     */
-    private boolean restartViaDockerCli(String containerName) {
-        try {
-            Process process = new ProcessBuilder("docker", "restart", containerName)
-                    .redirectErrorStream(true)
-                    .start();
-            boolean finished = process.waitFor(15, TimeUnit.SECONDS);
-            return finished && process.exitValue() == 0;
-        } catch (Exception e) {
-            log.debug("[DOCKER CLI] docker CLI execution unavailable: {}", e.getMessage());
-            return false;
-        }
-    }
-
-    private String mapServiceToContainer(String serviceName) {
-        switch (serviceName) {
-            case "order-service": return "self-healing-order-service";
-            case "payment-service": return "self-healing-payment-service";
-            case "inventory-service": return "self-healing-inventory-service";
-            case "ml-service": return "self-healing-ml-service";
-            default: return serviceName;
-        }
-    }
-
-    private boolean isDockerEnvironment() {
-        if (dockerContainerMode) return true;
-        if ("true".equalsIgnoreCase(System.getenv("DOCKER_CONTAINER_MODE"))) return true;
-        return new File(dockerSocketPath).exists();
+    public boolean isDockerEnvironment() {
+        return dockerRestartExecutor.isAvailable();
     }
 
     /**

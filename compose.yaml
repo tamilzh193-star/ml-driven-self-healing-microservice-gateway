@@ -13,6 +13,9 @@
 version: '3.8'
 
 services:
+  # ---------------------------------------------------------------------------
+  # 1. Primary Relational Persistence: MySQL 8.0
+  # ---------------------------------------------------------------------------
   mysql:
     image: mysql:8.0
     container_name: self-healing-mysql
@@ -36,6 +39,9 @@ services:
     networks:
       - self-healing-net
 
+  # ---------------------------------------------------------------------------
+  # 2. Machine Learning Anomaly Detection Service (Isolation Forest)
+  # ---------------------------------------------------------------------------
   ml-service:
     build:
       context: .
@@ -56,6 +62,9 @@ services:
     networks:
       - self-healing-net
 
+  # ---------------------------------------------------------------------------
+  # 3. Order Business Microservice
+  # ---------------------------------------------------------------------------
   order-service:
     build:
       context: .
@@ -67,6 +76,9 @@ services:
     environment:
       - SERVER_PORT=8081
       - SPRING_APPLICATION_NAME=order-service
+      - PAYMENT_SERVICE_URL=http://payment-service:8082
+      - INVENTORY_SERVICE_URL=http://inventory-service:8083
+      - ORDER_DOWNSTREAM_ENABLED=true
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
       interval: 10s
@@ -76,6 +88,9 @@ services:
     networks:
       - self-healing-net
 
+  # ---------------------------------------------------------------------------
+  # 4. Payment Business Microservice
+  # ---------------------------------------------------------------------------
   payment-service:
     build:
       context: .
@@ -96,6 +111,9 @@ services:
     networks:
       - self-healing-net
 
+  # ---------------------------------------------------------------------------
+  # 5. Inventory Business Microservice
+  # ---------------------------------------------------------------------------
   inventory-service:
     build:
       context: .
@@ -116,6 +134,9 @@ services:
     networks:
       - self-healing-net
 
+  # ---------------------------------------------------------------------------
+  # 6. Spring Cloud Gateway & Autonomous Operations Center
+  # ---------------------------------------------------------------------------
   gateway:
     build:
       context: .
@@ -136,6 +157,7 @@ services:
       inventory-service:
         condition: service_healthy
     volumes:
+      # Mount Docker socket to empower Gateway with genuine container restart capability
       - /var/run/docker.sock:/var/run/docker.sock
       - ./dataset:/dataset
     environment:
@@ -150,7 +172,11 @@ services:
       - ML_SERVICE_URL=http://ml-service:5000
       - DOCKER_CONTAINER_MODE=true
       - DOCKER_SOCKET_PATH=/var/run/docker.sock
-      - TELEMETRY_CSV_PATH=/dataset/telemetry.csv
+      - HEALING_RESTART_MODE=docker
+      - TELEMETRY_CSV_PATH=/runtime/telemetry_live.csv
+      - TELEMETRY_CSV_ENABLED=false
+      - ADMIN_AUTH_ENABLED=${ADMIN_AUTH_ENABLED:-true}
+      - ADMIN_API_KEY=${ADMIN_API_KEY:-}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
       interval: 10s

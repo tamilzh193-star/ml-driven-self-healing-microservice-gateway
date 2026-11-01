@@ -65,6 +65,9 @@ public class HealingEngineService {
     private AnomalyConfirmationService anomalyConfirmationService;
 
     @Autowired(required = false)
+    private ServiceTopologyService topologyService;
+
+    @Autowired(required = false)
     private DatabasePersistenceService databasePersistenceService;
 
     // Cooldown map: serviceName -> Instant until which healing is suppressed
@@ -147,6 +150,27 @@ public class HealingEngineService {
             return null;
         }
 
+        // Novelty N4: Topology-Aware Root Cause Localization & Dependency Suppression
+        if (!forceManual && topologyService != null && anomalyConfirmationService != null) {
+            Map<String, ServiceAnomalyState> activeStates = anomalyConfirmationService.getAllStates();
+            Optional<String> downstreamRootCause = topologyService.findDownstreamRootCause(serviceName, state, activeStates);
+            if (downstreamRootCause.isPresent()) {
+                String causeService = downstreamRootCause.get();
+                log.warn("[TOPOLOGY SUPPRESSION] Remediation for upstream victim '{}' suppressed. Downstream dependency '{}' is confirmed root cause.",
+                        serviceName, causeService);
+                HealingAuditRecord record = new HealingAuditRecord(
+                        serviceName, null,
+                        "Remediation suppressed by topology root-cause localization. Downstream dependency '" + causeService + "' is confirmed root cause.",
+                        anomalyScore, retryCountMap.computeIfAbsent(serviceName, k -> new AtomicInteger(0)).get()
+                );
+                record.setActionStatus(HealingStatus.SUPPRESSED_TOPOLOGY);
+                record.setRecoveryStatus("SUPPRESSED");
+                record.setRecoveryDetails("Suppressed due to downstream root cause: " + causeService);
+                recordAudit(record);
+                return record;
+            }
+        }
+
         AtomicInteger retries = retryCountMap.computeIfAbsent(serviceName, k -> new AtomicInteger(0));
         int currentAttempt = retries.incrementAndGet();
 
@@ -169,9 +193,14 @@ public class HealingEngineService {
         HealingStrategySelector.RemediationDecision decision = strategySelector.selectRemediation(state);
         HealingActionType actionType = decision.getActionType();
         String reason = decision.getReason();
+        String contextKey = decision.getContextKey();
 
         HealingAuditRecord record = new HealingAuditRecord(serviceName, actionType, reason, anomalyScore, currentAttempt);
         record.setActionStatus(HealingStatus.EXECUTING);
+
+        if (actionType == HealingActionType.RESTART) {
+            strategySelector.markRestartStarted(serviceName);
+        }
 
         long start = System.currentTimeMillis();
         boolean executed = remediationExecutionService.executeRemediation(serviceName, actionType);
@@ -184,6 +213,10 @@ public class HealingEngineService {
         record.setCooldownUntil(nextCooldown.toString());
 
         if (!executed) {
+            if (actionType == HealingActionType.RESTART) {
+                strategySelector.markRestartFinished(serviceName);
+            }
+            strategySelector.recordOutcome(contextKey, actionType, false);
             record.setActionStatus(HealingStatus.FAILED_RECOVERY);
             record.setRecoveryStatus("FAILED");
             record.setRecoveryDetails("Execution of " + actionType + " returned false or failed with error");
@@ -200,11 +233,24 @@ public class HealingEngineService {
         }
 
         boolean verified = verifyRecovery(serviceName);
+        if (actionType == HealingActionType.RESTART) {
+            strategySelector.markRestartFinished(serviceName);
+        }
+
+        // Outcome Learning Feedback (Novelty N3)
+        strategySelector.recordOutcome(contextKey, actionType, verified);
 
         if (verified) {
             record.setActionStatus(HealingStatus.RECOVERED);
             record.setRecoveryStatus("RECOVERED");
-            record.setRecoveryDetails(String.format("Service '%s' verified healthy: /actuator/health is UP and probe responded within SLA", serviceName));
+            String modeSuffix = "";
+            if (actionType == HealingActionType.RESTART) {
+                RestartResult lastResult = remediationExecutionService.getLastRestartResult(serviceName);
+                if (lastResult != null) {
+                    modeSuffix = String.format(" [Mode: %s]", lastResult.getMode());
+                }
+            }
+            record.setRecoveryDetails(String.format("Service '%s' verified healthy: /actuator/health is UP and probe responded within SLA%s", serviceName, modeSuffix));
             retries.set(0); // Reset retry counter upon successful recovery
 
             // Restore normal routing & rate limiting if temporary mitigations were active
@@ -317,6 +363,14 @@ public class HealingEngineService {
         Map<String, Integer> map = new HashMap<>();
         retryCountMap.forEach((k, v) -> map.put(k, v.get()));
         return map;
+    }
+
+    public void setTopologyService(ServiceTopologyService topologyService) {
+        this.topologyService = topologyService;
+    }
+
+    public void setAnomalyConfirmationService(AnomalyConfirmationService anomalyConfirmationService) {
+        this.anomalyConfirmationService = anomalyConfirmationService;
     }
 
     public void resetEngine() {

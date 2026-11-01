@@ -3,6 +3,7 @@ package com.selfhealing.gateway.filter;
 import com.selfhealing.gateway.service.RemediationExecutionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.Ordered;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpStatus;
@@ -65,20 +66,25 @@ public class SelfHealingRemediationFilter implements GlobalFilter, Ordered {
     }
 
     private String resolveServiceName(String path) {
-        if (path.startsWith("/orders")) {
+        if (path.startsWith("/orders") || path.startsWith("/order")) {
             return "order-service";
-        } else if (path.startsWith("/payments")) {
+        } else if (path.startsWith("/payments") || path.startsWith("/payment")) {
             return "payment-service";
-        } else if (path.startsWith("/inventory")) {
+        } else if (path.startsWith("/inventory") || path.startsWith("/invetory")) {
             return "inventory-service";
         }
         return null;
     }
 
+    @Value("${gateway.fallback.http-status:200}")
+    private int fallbackHttpStatus;
+
     private Mono<Void> respondWithFallback(ServerWebExchange exchange, String serviceName) {
         ServerHttpResponse response = exchange.getResponse();
-        response.setStatusCode(HttpStatus.OK);
+        response.setStatusCode(fallbackHttpStatus == 503 ? HttpStatus.SERVICE_UNAVAILABLE : HttpStatus.OK);
         response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+        response.getHeaders().set("Retry-After", "5");
+        response.getHeaders().set("X-Self-Healing", "active");
 
         String json = String.format(
                 "{\"status\":\"FALLBACK_REDIRECTION\",\"service\":\"%s\",\"message\":\"Self-Healing Gateway active: traffic redirected to safe degraded fallback while service recovers\",\"timestamp\":\"%s\"}",

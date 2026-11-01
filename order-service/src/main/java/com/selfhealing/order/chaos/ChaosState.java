@@ -18,6 +18,8 @@ public class ChaosState {
     private final AtomicBoolean errorActive = new AtomicBoolean(false);
     private final AtomicBoolean cpuActive = new AtomicBoolean(false);
     private final List<byte[]> memoryChunks = new CopyOnWriteArrayList<>();
+    // Non-resettable heap leak: retained across reset(), cleared only by true process restart
+    private static final List<byte[]> permanentLeak = new CopyOnWriteArrayList<>();
     private volatile Thread cpuStressThread;
 
     public void setSlow(int delay) {
@@ -76,6 +78,21 @@ public class ChaosState {
         }
     }
 
+    public synchronized void leakMemory(int megabytes) {
+        int mb = Math.min(Math.max(10, megabytes), 200);
+        try {
+            for (int i = 0; i < mb; i++) {
+                byte[] chunk = new byte[1024 * 1024];
+                Arrays.fill(chunk, (byte) 2);
+                permanentLeak.add(chunk);
+            }
+            log.warn("Chaos injected: PERMANENT memory leak allocated {} MB (total permanent chunks: {}). Reset will NOT clear this!",
+                    mb, permanentLeak.size());
+        } catch (OutOfMemoryError e) {
+            log.error("Chaos leak stopped to protect JVM: {}", e.getMessage());
+        }
+    }
+
     public synchronized void reset() {
         delayMs.set(0);
         errorActive.set(false);
@@ -87,7 +104,7 @@ public class ChaosState {
 
         memoryChunks.clear();
         System.gc(); // hint GC to reclaim released heap buffers
-        log.info("Chaos: all faults have been RESET to normal operation");
+        log.info("Chaos: resettable faults have been RESET. Permanent leak retained: {} MB", permanentLeak.size());
     }
 
     public int getDelayMs() {
@@ -103,7 +120,11 @@ public class ChaosState {
     }
 
     public int getAllocatedMb() {
-        return memoryChunks.size();
+        return memoryChunks.size() + permanentLeak.size();
+    }
+
+    public int getPermanentLeakMb() {
+        return permanentLeak.size();
     }
 
     public Map<String, Object> getStatus() {
@@ -112,8 +133,9 @@ public class ChaosState {
         status.put("delayMs", delayMs.get());
         status.put("errorActive", errorActive.get());
         status.put("cpuStressActive", cpuActive.get());
-        status.put("allocatedMemoryMb", memoryChunks.size());
-        status.put("healthy", delayMs.get() == 0 && !errorActive.get() && !cpuActive.get() && memoryChunks.isEmpty());
+        status.put("allocatedMemoryMb", memoryChunks.size() + permanentLeak.size());
+        status.put("permanentLeakMb", permanentLeak.size());
+        status.put("healthy", delayMs.get() == 0 && !errorActive.get() && !cpuActive.get() && memoryChunks.isEmpty() && permanentLeak.isEmpty());
         return status;
     }
 }

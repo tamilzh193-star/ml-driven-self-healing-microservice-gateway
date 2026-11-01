@@ -36,11 +36,21 @@ METADATA_PATH = os.path.join(MODEL_DIR, "model_metadata.json")
 model = None
 scaler = None
 metadata = {}
+scaled_feature_medians = {}
+decision_threshold = None
+
+SIGNATURE_MAP = {
+    "latency": "LATENCY_SPIKE",
+    "error_rate": "ERROR_BURST",
+    "cpu": "CPU_SATURATION",
+    "memory": "MEMORY_LEAK",
+    "request_rate": "THROUGHPUT_SURGE"
+}
 
 
 def load_artifacts():
     """Load model, scaler, and metadata once on startup."""
-    global model, scaler, metadata
+    global model, scaler, metadata, scaled_feature_medians, decision_threshold
     try:
         if not os.path.exists(MODEL_PATH) or not os.path.exists(SCALER_PATH):
             raise FileNotFoundError(f"Model artifacts missing in {MODEL_DIR}. Please run train_model.py first.")
@@ -51,10 +61,23 @@ def load_artifacts():
         if os.path.exists(METADATA_PATH):
             with open(METADATA_PATH, "r", encoding="utf-8") as f:
                 metadata = json.load(f)
+            scaled_feature_medians = metadata.get("scaled_feature_medians", {})
+            decision_threshold = metadata.get("decision_threshold")
         else:
             metadata = {"algorithm": "IsolationForest", "status": "No metadata file found"}
+            scaled_feature_medians = {}
+            decision_threshold = None
 
-        print(f"[STARTUP] Successfully loaded Isolation Forest model and StandardScaler from '{MODEL_DIR}'.", flush=True)
+        # Fallback to model.offset_ if decision_threshold not present
+        if decision_threshold is None and hasattr(model, "offset_"):
+            decision_threshold = float(model.offset_)
+
+        # Fallback to zeros (mean of StandardScaler) if medians not saved
+        for col in FEATURE_COLUMNS:
+            if col not in scaled_feature_medians:
+                scaled_feature_medians[col] = 0.0
+
+        print(f"[STARTUP] Successfully loaded Isolation Forest model and StandardScaler from '{MODEL_DIR}'. (Decision Threshold: {decision_threshold})", flush=True)
     except Exception as e:
         print(f"[STARTUP ERROR] Failed to load model artifacts: {e}", file=sys.stderr, flush=True)
 
@@ -112,19 +135,52 @@ def process_single_prediction(data):
     # Preprocess with fitted scaler
     scaled_array = scaler.transform(feature_array)
 
-    # Predict: 1 = normal, -1 = anomaly
-    pred_val = int(model.predict(scaled_array)[0])
-    is_anomaly = pred_val == -1
+    # Compute raw anomaly score via score_samples (lower score = more anomalous)
+    raw_score = float(model.score_samples(scaled_array)[0])
+
+    # Classify strictly against the saved calibrated threshold
+    if decision_threshold is not None:
+        is_anomaly = bool(raw_score < decision_threshold)
+    else:
+        is_anomaly = bool(int(model.predict(scaled_array)[0]) == -1)
+
     prediction_label = "ANOMALY" if is_anomaly else "NORMAL"
 
-    # Continuous decision score: negative indicates anomaly, positive indicates normal
-    anomaly_score = float(model.decision_function(scaled_array)[0])
+    # Continuous decision score relative to threshold (negative = anomaly, positive = normal)
+    # If decision_threshold is defined, anomaly_score = raw_score - decision_threshold
+    # Otherwise fallback to standard model.decision_function
+    if decision_threshold is not None:
+        anomaly_score = float(raw_score - decision_threshold)
+    else:
+        anomaly_score = float(model.decision_function(scaled_array)[0])
+
+    # Leave-One-Feature-Out (LOFO) Attribution
+    deltas = {}
+    for j, col in enumerate(FEATURE_COLUMNS):
+        x_lofo = scaled_array.copy()
+        x_lofo[0, j] = scaled_feature_medians.get(col, 0.0)
+        score_lofo = float(model.decision_function(x_lofo)[0])
+        # A positive delta indicates feature j pushed the score down toward anomaly
+        delta = score_lofo - anomaly_score
+        deltas[col] = max(0.0, delta)
+
+    total_delta = sum(deltas.values())
+    if total_delta > 0:
+        attribution = {col: round(deltas[col] / total_delta, 4) for col in FEATURE_COLUMNS}
+    else:
+        attribution = {col: round(1.0 / len(FEATURE_COLUMNS), 4) for col in FEATURE_COLUMNS}
+
+    dominant_feature = max(attribution.items(), key=lambda item: item[1])[0]
+    signature = SIGNATURE_MAP.get(dominant_feature, "GENERAL_ANOMALY") if is_anomaly else "NORMAL_OPERATION"
 
     return {
         "service": service_name,
         "prediction": prediction_label,
         "is_anomaly": is_anomaly,
         "anomaly_score": round(anomaly_score, 4),
+        "attribution": attribution,
+        "dominant_feature": dominant_feature,
+        "signature": signature,
         "timestamp": data.get("timestamp") or datetime.now().isoformat(),
         "features": {col: round(features[col], 2) for col in FEATURE_COLUMNS}
     }

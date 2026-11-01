@@ -61,7 +61,7 @@ spring:
         - id: inventory-service-direct
           uri: ${INVENTORY_SERVICE_URL:http://localhost:8083}
           predicates:
-            - Path=/inventory-service/**
+            - Path=/inventory-service/**, /invetory-service/**
           filters:
             - StripPrefix=1
 
@@ -101,7 +101,8 @@ telemetry:
   collection:
     enabled: true
     interval-ms: 5000
-    csv-path: ${TELEMETRY_CSV_PATH:../dataset/telemetry.csv}
+    csv-enabled: ${TELEMETRY_CSV_ENABLED:false}
+    csv-path: ${TELEMETRY_CSV_PATH:runtime/telemetry_live.csv}
 
 ml:
   service:
@@ -123,6 +124,25 @@ healing:
     cooldown-seconds: 30
     max-retries: 3
     verification-delay-ms: 2500
+  restart:
+    mode: ${HEALING_RESTART_MODE:auto}
+
+topology:
+  dependencies:
+    order-service:
+      - payment-service
+      - inventory-service
+    payment-service: []
+    inventory-service: []
+
+security:
+  admin:
+    key:
+      enabled: ${ADMIN_AUTH_ENABLED:true}
+
+admin:
+  api:
+    key: ${ADMIN_API_KEY:${ADMIN_KEY:}}
 
 persistence:
   database:

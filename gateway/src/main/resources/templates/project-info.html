@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Information &amp; System Overview — Self-Healing Microservice Gateway</title>
+    <style>
+        /* CSS DESIGN TOKENS — SHARED PALETTE (Dark Default, Black/Charcoal, Red, Orange) */
+        :root, [data-theme="dark"] {
+            --bg-page: #0b0c10;
+            --bg-panel: #14161f;
+            --bg-panel-subtle: #1c1f2b;
+            --bg-card: #181b26;
+            --border-color: #282c3c;
+            --border-subtle: #1f2330;
+            --border-hover: #3e445b;
+
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #8892a6;
+            --text-subtle: #5f687a;
+
+            --accent-red: #ef4444;
+            --accent-red-hover: #dc2626;
+            --accent-red-subtle: rgba(239, 68, 68, 0.12);
+            --accent-orange: #f97316;
+            --accent-orange-hover: #ea580c;
+            --accent-orange-subtle: rgba(249, 115, 22, 0.12);
+
+            --status-healthy-text: #34d399;
+            --status-healthy-bg: rgba(16, 185, 129, 0.12);
+            --status-healthy-border: rgba(16, 185, 129, 0.3);
+            --status-healthy-dot: #10b981;
+
+            --status-warning-text: #fb923c;
+            --status-warning-bg: rgba(249, 115, 22, 0.12);
+            --status-warning-border: rgba(249, 115, 22, 0.3);
+            --status-warning-dot: #f97316;
+
+            --status-danger-text: #f87171;
+            --status-danger-bg: rgba(239, 68, 68, 0.12);
+            --status-danger-border: rgba(239, 68, 68, 0.3);
+            --status-danger-dot: #ef4444;
+
+            --status-info-text: #38bdf8;
+            --status-info-bg: rgba(56, 189, 248, 0.12);
+            --status-info-border: rgba(56, 189, 248, 0.3);
+            --status-info-dot: #0284c7;
+
+            --radius-sm: 4px;
+            --radius-md: 6px;
+            --radius-lg: 10px;
+
+            --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.35);
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        [data-theme="light"] {
+            --bg-page: #f8fafc;
+            --bg-panel: #ffffff;
+            --bg-panel-subtle: #f1f5f9;
+            --bg-card: #ffffff;
+            --border-color: #e2e8f0;
+            --border-subtle: #edf2f7;
+            --border-hover: #cbd5e1;
+
+            --text-primary: #0f172a;
+            --text-secondary: #334155;
+            --text-muted: #64748b;
+            --text-subtle: #94a3b8;
+
+            --accent-red: #dc2626;
+            --accent-red-hover: #b91c1c;
+            --accent-red-subtle: #fef2f2;
+            --accent-orange: #ea580c;
+            --accent-orange-hover: #c2410c;
+            --accent-orange-subtle: #fff7ed;
+
+            --status-healthy-text: #166534;
+            --status-healthy-bg: #f0fdf4;
+            --status-healthy-border: #bbf7d0;
+            --status-healthy-dot: #16a34a;
+
+            --status-warning-text: #9a3412;
+            --status-warning-bg: #fff7ed;
+            --status-warning-border: #fed7aa;
+            --status-warning-dot: #ea580c;
+
+            --status-danger-text: #991b1b;
+            --status-danger-bg: #fef2f2;
+            --status-danger-border: #fecaca;
+            --status-danger-dot: #dc2626;
+
+            --status-info-text: #075985;
+            --status-info-bg: #f0f9ff;
+            --status-info-border: #bae6fd;
+            --status-info-dot: #0284c7;
+
+            --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-secondary);
+            line-height: 1.6;
+            font-size: 0.875rem;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .info-container {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 20px 24px 64px;
+        }
+
+        /* HEADER */
+        .header-bar {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-badge {
+            background: linear-gradient(135deg, var(--accent-red), var(--accent-orange));
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 0.95rem;
+            padding: 8px 12px;
+            border-radius: var(--radius-md);
+            letter-spacing: 0.05em;
+        }
+
+        .header-title-box h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+        }
+
+        .header-title-box .subtitle {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .header-nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .nav-link-btn {
+            font-size: 0.8125rem;
+            font-weight: 600;
+            padding: 7px 14px;
+            border-radius: var(--radius-md);
+            text-decoration: none;
+            color: var(--text-secondary);
+            background-color: var(--bg-panel-subtle);
+            border: 1px solid var(--border-color);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+
+        .nav-link-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--border-hover);
+        }
+
+        .nav-link-btn.active {
+            color: #ffffff;
+            background-color: var(--accent-red);
+            border-color: var(--accent-red);
+        }
+
+        .theme-toggle-btn {
+            background-color: var(--bg-panel-subtle);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 7px 14px;
+            border-radius: var(--radius-md);
+            font-size: 0.8125rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .theme-toggle-btn:hover {
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+        }
+
+        /* SECTION STYLING */
+        .content-section {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 24px 28px;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-card);
+        }
+
+        .section-header {
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-subtle);
+            padding-bottom: 12px;
+        }
+
+        .section-header h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-header p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* CARDS GRID */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 18px;
+            margin: 16px 0;
+        }
+
+        .info-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 18px;
+            position: relative;
+        }
+
+        .info-card h3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-card p {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .info-card ul {
+            padding-left: 20px;
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+            margin-top: 6px;
+        }
+
+        .info-card li {
+            margin-bottom: 4px;
+        }
+
+        /* DISCLOSURE BOX */
+        .disclosure-box {
+            background-color: var(--bg-panel-subtle);
+            border-left: 4px solid var(--accent-orange);
+            border-radius: var(--radius-sm);
+            padding: 14px 18px;
+            margin: 16px 0;
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+        }
+
+        .disclosure-box strong {
+            color: var(--text-primary);
+        }
+
+        .disclosure-box.danger {
+            border-left-color: var(--accent-red);
+        }
+
+        /* TABLES */
+        table.spec-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8125rem;
+            margin: 14px 0;
+        }
+
+        table.spec-table th {
+            background-color: var(--bg-panel-subtle);
+            color: var(--text-primary);
+            font-weight: 600;
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            text-align: left;
+            text-transform: uppercase;
+            font-size: 0.6875rem;
+            letter-spacing: 0.04em;
+        }
+
+        table.spec-table td {
+            padding: 10px 14px;
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            vertical-align: middle;
+        }
+
+        table.spec-table tr:hover td {
+            background-color: var(--bg-panel-subtle);
+        }
+
+        /* CONFUSION MATRIX GRID */
+        .cm-container {
+            display: inline-block;
+            margin: 16px 0;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 16px 20px;
+        }
+
+        .cm-grid {
+            display: grid;
+            grid-template-columns: 100px 110px 110px;
+            gap: 6px;
+            margin-top: 10px;
+            text-align: center;
+            font-size: 0.8125rem;
+        }
+
+        .cm-cell {
+            padding: 12px 10px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+        }
+
+        .cm-cell.header {
+            font-weight: 700;
+            color: var(--text-muted);
+            background-color: var(--bg-panel-subtle);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
+        }
+
+        .cm-cell.correct {
+            background-color: var(--status-healthy-bg);
+            border-color: var(--status-healthy-border);
+            color: var(--status-healthy-text);
+        }
+
+        .cm-cell.incorrect {
+            background-color: var(--status-danger-bg);
+            border-color: var(--status-danger-border);
+            color: var(--status-danger-text);
+        }
+
+        .cm-cell .count {
+            font-size: 1.25rem;
+            font-weight: 700;
+            display: block;
+        }
+
+        .cm-cell .desc {
+            font-size: 0.6875rem;
+            opacity: 0.85;
+            display: block;
+            margin-top: 2px;
+        }
+
+        /* BADGES */
+        .tag-badge {
+            display: inline-block;
+            font-size: 0.6875rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-panel-subtle);
+            color: var(--text-primary);
+            margin-right: 6px;
+        }
+
+        .tag-badge.verified {
+            background-color: var(--status-healthy-bg);
+            border-color: var(--status-healthy-border);
+            color: var(--status-healthy-text);
+        }
+
+        .tag-badge.simulated {
+            background-color: var(--status-warning-bg);
+            border-color: var(--status-warning-border);
+            color: var(--status-warning-text);
+        }
+
+        /* FLOW DIAGRAM */
+        .flow-stepper {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .flow-step-box {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            padding: 14px 18px;
+            position: relative;
+        }
+
+        .flow-step-num {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background-color: var(--accent-red);
+            color: #ffffff;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8125rem;
+            flex-shrink: 0;
+        }
+
+        .flow-step-content h4 {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .flow-step-content p {
+            font-size: 0.8125rem;
+            color: var(--text-secondary);
+        }
+
+        .code-block {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-sm);
+            padding: 12px 16px;
+            font-family: ui-monospace, Menlo, Monaco, Consolas, monospace;
+            font-size: 0.8125rem;
+            color: var(--text-primary);
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        .footer-note {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 32px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-subtle);
+        }
+    </style>
+</head>
+<body>
+    <div class="info-container">
+        <!-- TOP HEADER & NAVIGATION -->
+        <header class="header-bar">
+            <div class="header-brand">
+                <span class="brand-badge">MCA DISSERTATION</span>
+                <div class="header-title-box">
+                    <h1>Project Information &amp; System Overview</h1>
+                    <div class="subtitle">An ML-Driven Self-Healing Microservice Gateway for Proactive Anomaly Detection and Autonomous Recovery</div>
+                </div>
+            </div>
+
+            <div class="header-nav-controls">
+                <a href="/dashboard" class="nav-link-btn">&#128202; Live Dashboard</a>
+                <a href="/info" class="nav-link-btn active">&#128214; Project Information</a>
+                <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">
+                    <span id="themeToggleIcon">&#127769;</span> <span id="themeToggleText">Dark</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- 1. PROJECT OVERVIEW -->
+        <section class="content-section">
+            <div class="section-header">
+                <h2>&#128218; 1. Executive Project Overview</h2>
+                <p>Background motivation, problem formulation, dissertation objectives, and architectural methodology.</p>
+            </div>
+
+            <div class="cards-grid">
+                <div class="info-card">
+                    <h3>&#9888; Problem Formulation</h3>
+                    <p>Modern cloud systems adopt distributed microservices communicating across asynchronous and synchronous network channels. These architectures suffer from:</p>
+                    <ul>
+                        <li><strong>Silent Performance Degradation:</strong> Progressive memory leaks and thread pool stalls that pass binary UP/DOWN health checks.</li>
+                        <li><strong>Cascading Failure Storms:</strong> When downstream services slow down, upstream callers exhaust thread pools and fail symmetrically.</li>
+                        <li><strong>Alert Fatigue &amp; Delayed MTTR:</strong> Static threshold monitors require manual on-call engineer intervention, leading to prolonged recovery times.</li>
+                    </ul>
+                </div>
+
+                <div class="info-card">
+                    <h3>&#127919; Project Objectives</h3>
+                    <p>To design, implement, and rigorously verify an autonomous, closed-loop resilience gateway that:</p>
+                    <ul>
+                        <li>Continuously ingests multivariate telemetry (CPU, Memory, Latency, Error Rate, Request Rate) from microservices.</li>
+                        <li>Executes real-time unsupervised anomaly detection using an Isolation Forest ML model.</li>
+                        <li>Suppresses transient noise via Severity-Weighted Evidence Accumulation (SWEA).</li>
+                        <li>Pinpoints causal failure signatures via Leave-One-Feature-Out (LOFO) attribution.</li>
+                        <li>Suppresses victim remediations under cascading DAG dependency failures.</li>
+                        <li>Executes autonomous recovery actions guided by Contextual Thompson Sampling with database persistence.</li>
+                    </ul>
+                </div>
+
+                <div class="info-card">
+                    <h3>&#129504; Self-Healing Pipeline</h3>
+                    <p>The proposed architecture introduces a closed feedback loop combining:</p>
+                    <ul>
+                        <li><strong>Ingestion:</strong> 5-second interval multivariate telemetry aggregation.</li>
+                        <li><strong>Inference:</strong> Isolation Forest boundary scoring (<code th:text="${data != null and data.mlService != null ? data.mlService.decisionThreshold : '-0.5140'}">&theta; = -0.5140</code>).</li>
+                        <li><strong>Confirmation:</strong> Temporal SWEA accumulator requiring sustained anomaly proof.</li>
+                        <li><strong>Remediation:</strong> Multi-tier escalation ($L_1$ Rate Limit, $L_2$ Traffic Redirection, $L_3$ Container Restart).</li>
+                        <li><strong>Verification:</strong> Two-stage health and business endpoint synthetic transaction audit.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="disclosure-box">
+                <strong>Academic Scope &amp; Limitation Notice:</strong> This project is an applied Master of Computer Applications (MCA) dissertation engineering prototype. The machine learning model was trained and evaluated on synthetic telemetry collected in a controlled test harness. Results reflect architectural design verification under synthetic workloads rather than multi-year enterprise production operations.
+            </div>
+        </section>
+
+        <!-- 2. ARCHITECTURE AND TECHNOLOGY STACK -->
+        <section class="content-section">
+            <div class="section-header">
+                <h2>&#128187; 2. Architecture &amp; Technology Stack</h2>
+                <p>Concrete implementation components, deployment containers, and relational persistence schema.</p>
+            </div>
+
+            <table class="spec-table">
+                <thead>
+                    <tr>
+                        <th>Tier / Component</th>
+                        <th>Implementation Technology</th>
+                        <th>Port</th>
+                        <th>Role &amp; Architectural Responsibility</th>
+                        <th>Implementation Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>API Gateway Core</strong></td>
+                        <td>Java 17, Spring Boot 3.2.5, Spring Cloud Gateway (Netty)</td>
+                        <td><code>:8080</code></td>
+                        <td>Reverse proxy, multivariate telemetry collector, healing execution filter, admin auth filter</td>
+                        <td><span class="tag-badge verified">Verified (Unit &amp; Live Tests)</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Order Microservice</strong></td>
+                        <td>Java 17, Spring Boot 3.2.5, Spring MVC</td>
+                        <td><code>:8081</code></td>
+                        <td>Upstream business microservice calling payment and inventory; chaos injection endpoints</td>
+                        <td><span class="tag-badge verified">Verified (Live Container)</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Payment Microservice</strong></td>
+                        <td>Java 17, Spring Boot 3.2.5, Spring MVC</td>
+                        <td><code>:8082</code></td>
+                        <td>Downstream business microservice handling payment authorization; chaos injection endpoints</td>
+                        <td><span class="tag-badge verified">Verified (Live Container)</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Inventory Microservice</strong></td>
+                        <td>Java 17, Spring Boot 3.2.5, Spring MVC</td>
+                        <td><code>:8083</code></td>
+                        <td>Downstream business microservice handling inventory stock; chaos injection endpoints</td>
+                        <td><span class="tag-badge verified">Verified (Live Container)</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>ML Anomaly Daemon</strong></td>
+                        <td>Python 3.11, Flask, scikit-learn, joblib</td>
+                        <td><code>:5000</code></td>
+                        <td>Isolation Forest inference engine, LOFO marginal attribution decomposition, /predict API</td>
+                        <td><span class="tag-badge verified">Verified (Flask API &amp; Tests)</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Relational Persistence</strong></td>
+                        <td>MySQL 8.0 (Production) / H2 in MySQL Mode (Dev)</td>
+                        <td><code>:3306</code></td>
+                        <td>Persisting telemetry, anomaly inferences, healing audit trails, and Thompson sampling posteriors</td>
+                        <td><span class="tag-badge verified">Verified (Schema &amp; Persistence Tests)</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Operations Dashboard</strong></td>
+                        <td>Thymeleaf 3.1, HTML5, CSS3 Tokens, Chart.js</td>
+                        <td><code>:8080/dashboard</code></td>
+                        <td>Single-pane operations console, live 3s polling, chaos trigger cluster, dark/light theme</td>
+                        <td><span class="tag-badge verified">Verified (Thymeleaf &amp; APIs)</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Container Runtime</strong></td>
+                        <td>Docker &amp; Docker Compose (Linux / Windows Desktop)</td>
+                        <td><code>socket</code></td>
+                        <td>Automated container restart execution via mounted Docker UNIX domain socket</td>
+                        <td><span class="tag-badge verified">Verified (Docker Compose Stack)</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- 3. ISOLATION FOREST MODEL & EVALUATION RESULTS -->
+        <section class="content-section">
+            <div class="section-header">
+                <h2>&#129514; 3. ML Model Performance &amp; Evaluation Results</h2>
+                <p>Verifiable metrics derived directly from <code style="color: var(--accent-orange);">ml-service/model/model_metadata.json</code> and the held-out evaluation dataset.</p>
+            </div>
+
+            <div class="cards-grid">
+                <div class="info-card">
+                    <h3>&#129504; Algorithm Configuration</h3>
+                    <ul>
+                        <li><strong>Algorithm:</strong> Isolation Forest (scikit-learn ensemble)</li>
+                        <li><strong>Number of Estimators ($n$):</strong> 100 Isolation Trees</li>
+                        <li><strong>Contamination Parameter:</strong> 0.04 (4% expected outliers)</li>
+                        <li><strong>Random State:</strong> 42 (Reproducible seed)</li>
+                        <li><strong>Features Evaluated:</strong> CPU (%), Memory (%), Latency (ms), Error Rate (%), Request Rate (req/s)</li>
+                        <li><strong>Calibrated Decision Boundary (&theta;):</strong> <code style="color: var(--accent-orange); font-weight: 700;">-0.5140227742629923</code></li>
+                        <li><strong>Calibration Protocol:</strong> Constrained Recall Maximization targeting $\text{FPR} \le 5\%$ on calibration partition</li>
+                    </ul>
+                </div>
+
+                <div class="info-card">
+                    <h3>&#128202; Held-Out Test Metrics ($N = 308$)</h3>
+                    <table class="spec-table" style="margin-top: 8px;">
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Reported Test Value</th>
+                                <th>Interpretation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Accuracy</strong></td>
+                                <td><strong style="color: var(--text-primary);">94.48%</strong></td>
+                                <td>Overall percentage of correct normal/anomaly classifications</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Precision</strong></td>
+                                <td><strong style="color: var(--status-warning-text);">75.93%</strong></td>
+                                <td>41 true anomalies detected out of 54 flagged instances</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Recall</strong></td>
+                                <td><strong style="color: var(--status-healthy-text);">91.11%</strong></td>
+                                <td>41 anomalies caught out of 45 true fault samples (High sensitivity)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>F1-Score</strong></td>
+                                <td><strong style="color: var(--status-info-text);">82.83%</strong></td>
+                                <td>Harmonic mean balancing precision and recall</td>
+                            </tr>
+                            <tr>
+                                <td><strong>False Positive Rate (FPR)</strong></td>
+                                <td><strong style="color: var(--status-healthy-text);">4.94%</strong></td>
+                                <td>Satisfies the $\le 5.0\%$ constraint on normal test records</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- CONFUSION MATRIX VISUALIZATION -->
+            <div style="margin: 20px 0;">
+                <h3 style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">Held-Out Evaluation Confusion Matrix ($N = 308$ samples)</h3>
+                <div class="cm-container">
+                    <div class="cm-grid">
+                        <div class="cm-cell header"></div>
+                        <div class="cm-cell header">PREDICTED NORMAL</div>
+                        <div class="cm-cell header">PREDICTED ANOMALY</div>
+
+                        <div class="cm-cell header">ACTUAL NORMAL</div>
+                        <div class="cm-cell correct">
+                            <span class="count">250</span>
+                            <span class="desc">True Negative (TN)</span>
+                        </div>
+                        <div class="cm-cell incorrect">
+                            <span class="count">13</span>
+                            <span class="desc">False Positive (FP)</span>
+                        </div>
+
+                        <div class="cm-cell header">ACTUAL ANOMALY</div>
+                        <div class="cm-cell incorrect">
+                            <span class="count">4</span>
+                            <span class="desc">False Negative (FN)</span>
+                        </div>
+                        <div class="cm-cell correct">
+                            <span class="count">41</span>
+                            <span class="desc">True Positive (TP)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CRITICAL METHODOLOGICAL DISCLOSURES -->
+            <div class="disclosure-box danger">
+                <h4 style="color: var(--accent-red); margin-bottom: 6px;">&#9888; Essential Academic &amp; Model Limitations</h4>
+                <ul style="padding-left: 20px; font-size: 0.8125rem;">
+                    <li><strong>Held-Out vs. Production:</strong> These figures reflect performance on a disjoint 308-row held-out test file (<code style="color: var(--text-primary);">dataset/test_heldout.csv</code>), NOT continuous live production accuracy.</li>
+                    <li><strong>Synthetic Telemetry Session:</strong> The dataset was collected during a single multi-stage synthetic telemetry session. It verifies detection capability under injected fault patterns, but does not prove generalization across disparate real-world enterprise architectures.</li>
+                    <li><strong>Fault Samples in Training:</strong> The training dataset (<code style="color: var(--text-primary);">dataset/train_clean.csv</code>) contains 12 fault rows (800 rows total) due to boundary transitions during data capture; it is not purely pristine data.</li>
+                    <li><strong>Why Accuracy Alone is Misleading:</strong> In anomaly detection datasets, normal operational records vastly outnumber fault records (e.g. 263 normal vs. 45 fault rows in test data). A trivial model that always predicts "Normal" would achieve ~85% accuracy while failing to detect any outages. Hence, <strong>Recall (91.11%)</strong> and <strong>FPR (4.94%)</strong> are the governing performance criteria.</li>
+                    <li><strong>False Positives vs. False Negatives:</strong> A False Positive causes unnecessary throttling or container restarts; a False Negative allows an unmitigated outage to propagate. The calibrated threshold ($\theta = -0.5140$) enforces FPR $\le 5\%$ to prevent false restarts while maintaining $> 90\%$ recall.</li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- 4. SELF-HEALING ARCHITECTURE COMPONENTS -->
+        <section class="content-section">
+            <div class="section-header">
+                <h2>&#128737; 4. Self-Healing Implementation Components</h2>
+                <p>Concrete software mechanisms implemented in the Java gateway and Python ML microservice.</p>
+            </div>
+
+            <div class="cards-grid">
+                <!-- SWEA -->
+                <div class="info-card">
+                    <h3>1. Severity-Weighted Evidence Accumulation (SWEA)</h3>
+                    <p><strong>Class:</strong> <code>AnomalyConfirmationService.java</code></p>
+                    <p><strong>Purpose:</strong> Replaces naive event counting with a recursive evidence accumulator $E_t = \lambda_a E_{t-1} + g(s_t)$. Severe anomalies ($s_t < -0.30$) accelerate evidence accumulation to trigger confirmation in 2 observation cycles ($\sim 9.4$s vs. $15$s standard window), while transient jitter decays exponentially.</p>
+                    <p><span class="tag-badge verified">Verified (Unit Tests: SweaConfirmationTest)</span></p>
+                </div>
+
+                <!-- LOFO -->
+                <div class="info-card">
+                    <h3>2. Leave-One-Feature-Out (LOFO) Attribution</h3>
+                    <p><strong>Module:</strong> <code>ml-service/app.py</code></p>
+                    <p><strong>Purpose:</strong> Resolves the "black-box" dilemma of unsupervised Isolation Forests by replacing each feature with its baseline median, measuring the score delta, and outputting normalized percentage contributions mapping to failure signatures (<code>LATENCY_SPIKE</code>, <code>MEMORY_LEAK</code>, <code>ERROR_BURST</code>, <code>CPU_SATURATION</code>).</p>
+                    <p><span class="tag-badge verified">Verified (Unit Tests: test_attribution.py)</span></p>
+                </div>
+
+                <!-- Thompson Sampling -->
+                <div class="info-card">
+                    <h3>3. Contextual Thompson Sampling</h3>
+                    <p><strong>Class:</strong> <code>HealingStrategySelector.java</code></p>
+                    <p><strong>Purpose:</strong> Models remediation success probabilities as Beta distributions $\text{Beta}(\alpha, \beta)$ conditioned on context keys (e.g. <code>latency:severe</code>). Uses an exact Marsaglia-Tsang Gamma generator to sample actions, balancing exploration and exploitation.</p>
+                    <p><span class="tag-badge verified">Verified (Unit Tests: OutcomeLearningPolicyTest)</span></p>
+                </div>
+
+                <!-- Topology DAG -->
+                <div class="info-card">
+                    <h3>4. Topology DAG Root-Cause Suppression</h3>
+                    <p><strong>Class:</strong> <code>ServiceTopologyService.java</code></p>
+                    <p><strong>Purpose:</strong> Evaluates service call directed graphs. When an upstream caller (e.g. <code>order-service</code>) exhibits latency symptoms because downstream <code>payment-service</code> is degraded, the engine suppresses remediation on the caller and targets the root cause directly.</p>
+                    <p><span class="tag-badge verified">Verified (Unit Tests: RootCauseLocalizationTest)</span></p>
+                </div>
+
+                <!-- Multi-Tier Remediation -->
+                <div class="info-card">
+                    <h3>5. Multi-Tier Escalation Ladder</h3>
+                    <p><strong>Classes:</strong> <code>RemediationExecutionService.java</code>, <code>DockerRestartExecutor.java</code></p>
+                    <p><strong>Purpose:</strong> Implements a progressive mitigation ladder: Tier 1 ($L_1$) Dynamic Rate-Limiting, Tier 2 ($L_2$) Fail-Fast Traffic Redirection, and Tier 3 ($L_3$) Genuine Container Restart via mounted Docker socket with soft-reset fallback.</p>
+                    <p><span class="tag-badge verified">Verified (Unit &amp; Docker Integration Tests)</span></p>
+                </div>
+
+                <!-- Policy Persistence -->
+                <div class="info-card">
+                    <h3>6. Policy Statistics Relational Persistence</h3>
+                    <p><strong>Classes:</strong> <code>DatabasePersistenceService.java</code>, <code>HealingStrategySelector.java</code></p>
+                    <p><strong>Purpose:</strong> Persists updated Beta distribution parameters ($\alpha, \beta, \text{successes}, \text{failures}$) to MySQL table <code>policy_stats</code>. Validates records at gateway startup, restoring learned policies across restarts.</p>
+                    <p><span class="tag-badge verified">Verified (Unit Tests: PolicyPersistenceTest)</span></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. WORKFLOW & SEQUENCE OF EVENTS -->
+        <section class="content-section">
+            <div class="section-header">
+                <h2>&#128260; 5. Autonomous Recovery Execution Flow</h2>
+                <p>The 8-stage closed-loop operational lifecycle from telemetry ingestion to relational outcome learning.</p>
+            </div>
+
+            <div class="flow-stepper">
+                <div class="flow-step-box">
+                    <div class="flow-step-num">1</div>
+                    <div class="flow-step-content">
+                        <h4>Scheduled Telemetry Polling (Every 5 Seconds)</h4>
+                        <p>Gateway's <code>TelemetryCollectorService</code> polls Spring Boot Actuator endpoints (<code>/actuator/metrics</code>, <code>/actuator/health</code>) across all registered services, aggregating 5 normalized features: CPU, Memory, Latency, Error Rate, and Request Rate.</p>
+                    </div>
+                </div>
+
+                <div class="flow-step-box">
+                    <div class="flow-step-num">2</div>
+                    <div class="flow-step-content">
+                        <h4>Flask Isolation Forest Inference &amp; Attribution</h4>
+                        <p>Gateway posts telemetry vectors to <code>:5000/predict</code>. The ML daemon computes the Isolation Forest score ($s_t$) and applies LOFO margin decomposition to compute percentage attribution shares and determine the failure signature.</p>
+                    </div>
+                </div>
+
+                <div class="flow-step-box">
+                    <div class="flow-step-num">3</div>
+                    <div class="flow-step-content">
+                        <h4>Severity-Weighted Evidence Accumulation (SWEA)</h4>
+                        <p>Gateway updates evidence $E_t = \lambda_a E_{t-1} + g(s_t)$. If $E_t \ge \theta = 3.0$, the anomaly is confirmed. Severe anomalies confirm in 2 cycles; transient jitter rapidly decays, preventing flapping.</p>
+                    </div>
+                </div>
+
+                <div class="flow-step-box">
+                    <div class="flow-step-num">4</div>
+                    <div class="flow-step-content">
+                        <h4>Topology DAG Root-Cause Evaluation</h4>
+                        <p>Before executing healing, <code>ServiceTopologyService</code> checks if any downstream dependency is confirmed anomalous. If the caller exhibits external latency symptoms, remediation on the caller is suppressed (<code>SUPPRESSED_TOPOLOGY</code>).</p>
+                    </div>
+                </div>
+
+                <div class="flow-step-box">
+                    <div class="flow-step-num">5</div>
+                    <div class="flow-step-content">
+                        <h4>Contextual Thompson Sampling Strategy Selection</h4>
+                        <p>The selector samples Beta variates $\theta_{C,a} \sim \text{Beta}(\alpha, \beta)$ for candidate actions ($L_1, L_2, L_3$) conditioned on context key. The action maximizing expected utility is chosen; sustained failures automatically escalate.</p>
+                    </div>
+                </div>
+
+                <div class="flow-step-box">
+                    <div class="flow-step-num">6</div>
+                    <div class="flow-step-content">
+                        <h4>Remediation Execution</h4>
+                        <p>Gateway activates dynamic route rate-limiting, traffic fallback redirection (HTTP 503 retry-after), or invokes container restart via Docker socket. Cooldown timers protect against rapid restart loops.</p>
+                    </div>
+                </div>
+
+                <div class="flow-step-box">
+                    <div class="flow-step-num">7</div>
+                    <div class="flow-step-content">
+                        <h4>Closed-Loop Health Verification Probe</h4>
+                        <p>Following action execution and a cooldown delay, the gateway executes active probes: Actuator liveness and synthetic business transaction requests (e.g. <code>GET /orders</code>). Status is confirmed <code>RECOVERED</code> only upon verified HTTP 200 responses.</p>
+                    </div>
+                </div>
+
+                <div class="flow-step-box">
+                    <div class="flow-step-num">8</div>
+                    <div class="flow-step-content">
+                        <h4>Outcome Audit &amp; Policy Statistics Persistence</h4>
+                        <p>If verified healthy, $\alpha$ is incremented; if unrecovered, $\beta$ is incremented. Posteriors are persisted to MySQL table <code>policy_stats</code>, and an immutable record is logged in <code>healing_audit_logs</code>.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. RUN INSTRUCTIONS & DEMONSTRATION GUIDE -->
+        <section class="content-section">
+            <div class="section-header">
+                <h2>&#128640; 6. Execution &amp; Viva Demonstration Guide</h2>
+                <p>Step-by-step instructions for running the cluster and conducting a live self-healing evaluation.</p>
+            </div>
+
+            <div class="cards-grid">
+                <div class="info-card">
+                    <h3>&#128273; Local Admin Key Setup</h3>
+                    <p>Administrative actions require <code>X-Admin-Key</code> authentication. For local demonstrations, the key defaults to a demo placeholder or is set via environment variable:</p>
+                    <div class="code-block">set ADMIN_AUTH_ENABLED=true
+set ADMIN_API_KEY=demo-admin-secret-change-me</div>
+                    <p>In the Operations Dashboard, click the <strong>Admin Key</strong> button to view or update your key stored in local session.</p>
+                </div>
+
+                <div class="info-card">
+                    <h3>&#128187; Starting the Cluster</h3>
+                    <p><strong>Option A (Standalone Bat Script):</strong></p>
+                    <div class="code-block">run_all.bat</div>
+                    <p><strong>Option B (Docker Compose):</strong></p>
+                    <div class="code-block">docker compose up -d</div>
+                    <p>Access the Operations Dashboard at: <a href="/dashboard" style="color: var(--accent-orange);">http://localhost:8080/dashboard</a></p>
+                </div>
+
+                <div class="info-card">
+                    <h3>&#127891; 3-Minute Viva Demonstration Script</h3>
+                    <ul>
+                        <li><strong>1. Baseline Health:</strong> Open Dashboard. Show all 3 microservices green, ML service online, and calibrated threshold $\theta = -0.5140$.</li>
+                        <li><strong>2. Inject Latency:</strong> In the Chaos Console, click <strong>"Slow Latency (+1.6s)"</strong> on <code>payment-service</code>.</li>
+                        <li><strong>3. Observe SWEA Confirmation:</strong> Show status transition from HEALTHY &rarr; SUSPECT &rarr; CONFIRMED_ANOMALY.</li>
+                        <li><strong>4. Autonomous Healing:</strong> Observe Gateway trigger <code>TRAFFIC_REDIRECTION</code> or <code>RESTART</code>.</li>
+                        <li><strong>5. Verified Recovery:</strong> Watch the audit trail transition to <code>RECOVERED</code>, restoring latency to $< 25$ms.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <footer class="footer-note">
+            Self-Healing Microservice Cloud Gateway &bull; Master of Computer Applications (MCA) Final Year Dissertation Project &bull; 2026
+        </footer>
+    </div>
+
+    <script>
+        function initTheme() {
+            const savedTheme = localStorage.getItem('self-healing-theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeButton(savedTheme);
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme') || 'dark';
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('self-healing-theme', next);
+            updateThemeButton(next);
+        }
+
+        function updateThemeButton(theme) {
+            const icon = document.getElementById('themeToggleIcon');
+            const text = document.getElementById('themeToggleText');
+            if (theme === 'dark') {
+                icon.textContent = '🌙';
+                text.textContent = 'Dark';
+            } else {
+                icon.textContent = '☀️';
+                text.textContent = 'Light';
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            initTheme();
+        });
+    </script>
+</body>
+</html>

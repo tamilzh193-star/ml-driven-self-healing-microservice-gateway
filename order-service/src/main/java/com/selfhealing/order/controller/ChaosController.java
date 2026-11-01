@@ -45,6 +45,23 @@ public class ChaosController {
         return ResponseEntity.ok(chaosState.getStatus());
     }
 
+    @PostMapping("/leak")
+    public ResponseEntity<Map<String, Object>> injectPermanentLeak(@RequestParam(defaultValue = "50") int megabytes) {
+        chaosState.leakMemory(megabytes);
+        return ResponseEntity.ok(chaosState.getStatus());
+    }
+
+    @PostMapping("/crash")
+    public ResponseEntity<Map<String, Object>> crashService() {
+        new Thread(() -> {
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException ignored) {}
+            Runtime.getRuntime().halt(1);
+        }, "chaos-crash-thread").start();
+        return ResponseEntity.ok(Map.of("status", "CRASHING", "message", "Service JVM halting in 200ms. True restart required."));
+    }
+
     @PostMapping("/reset")
     public ResponseEntity<Map<String, Object>> resetChaos() {
         chaosState.reset();

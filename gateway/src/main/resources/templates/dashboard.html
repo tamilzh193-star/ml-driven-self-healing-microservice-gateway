@@ -1,63 +1,116 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<html xmlns:th="http://www.thymeleaf.org" lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Self-Healing Microservice Gateway — Operations Center</title>
+    <title>Autonomous Self-Healing Cloud Operations Center — ML Gateway</title>
+    <!-- Chart.js for real-time telemetry visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
-        :root {
+        /* CSS DESIGN TOKENS — DEFAULT DARK THEME (Black, Dark Grey, Red, Orange) */
+        :root, [data-theme="dark"] {
+            --bg-page: #0b0c10;
+            --bg-panel: #14161f;
+            --bg-panel-subtle: #1c1f2b;
+            --bg-card: #181b26;
+            --border-color: #282c3c;
+            --border-subtle: #1f2330;
+            --border-hover: #3e445b;
+
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #8892a6;
+            --text-subtle: #5f687a;
+
+            /* Brand Accents: Red & Orange */
+            --accent-red: #ef4444;
+            --accent-red-hover: #dc2626;
+            --accent-red-subtle: rgba(239, 68, 68, 0.12);
+            --accent-orange: #f97316;
+            --accent-orange-hover: #ea580c;
+            --accent-orange-subtle: rgba(249, 115, 22, 0.12);
+
+            /* Status Tokens */
+            --status-healthy-text: #34d399;
+            --status-healthy-bg: rgba(16, 185, 129, 0.12);
+            --status-healthy-border: rgba(16, 185, 129, 0.3);
+            --status-healthy-dot: #10b981;
+
+            --status-warning-text: #fb923c;
+            --status-warning-bg: rgba(249, 115, 22, 0.12);
+            --status-warning-border: rgba(249, 115, 22, 0.3);
+            --status-warning-dot: #f97316;
+
+            --status-danger-text: #f87171;
+            --status-danger-bg: rgba(239, 68, 68, 0.12);
+            --status-danger-border: rgba(239, 68, 68, 0.3);
+            --status-danger-dot: #ef4444;
+
+            --status-info-text: #38bdf8;
+            --status-info-bg: rgba(56, 189, 248, 0.12);
+            --status-info-border: rgba(56, 189, 248, 0.3);
+            --status-info-dot: #0284c7;
+
+            --radius-sm: 4px;
+            --radius-md: 6px;
+            --radius-lg: 10px;
+
+            --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.35);
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+
+        /* LIGHT THEME (Clean, High-Contrast Slate/White with Red & Orange Accents) */
+        [data-theme="light"] {
             --bg-page: #f8fafc;
             --bg-panel: #ffffff;
-            --bg-subtle: #f1f5f9;
+            --bg-panel-subtle: #f1f5f9;
+            --bg-card: #ffffff;
             --border-color: #e2e8f0;
             --border-subtle: #edf2f7;
             --border-hover: #cbd5e1;
-            
+
             --text-primary: #0f172a;
             --text-secondary: #334155;
             --text-muted: #64748b;
             --text-subtle: #94a3b8;
-            
-            --primary-accent: #2563eb;
-            --primary-accent-hover: #1d4ed8;
-            --primary-accent-subtle: #eff6ff;
-            
-            --status-green-text: #166534;
-            --status-green-bg: #f0fdf4;
-            --status-green-border: #bbf7d0;
-            --status-green-dot: #16a34a;
-            
-            --status-amber-text: #92400e;
-            --status-amber-bg: #fffbeb;
-            --status-amber-border: #fde68a;
-            --status-amber-dot: #d97706;
-            
-            --status-red-text: #991b1b;
-            --status-red-bg: #fef2f2;
-            --status-red-border: #fecaca;
-            --status-red-dot: #dc2626;
-            
-            --status-blue-text: #1e40af;
-            --status-blue-bg: #eff6ff;
-            --status-blue-border: #bfdbfe;
-            --status-blue-dot: #2563eb;
-            
-            --radius-sm: 4px;
-            --radius-md: 6px;
-            --radius-lg: 8px;
-            
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-panel: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
-            
-            --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+
+            --accent-red: #dc2626;
+            --accent-red-hover: #b91c1c;
+            --accent-red-subtle: #fef2f2;
+            --accent-orange: #ea580c;
+            --accent-orange-hover: #c2410c;
+            --accent-orange-subtle: #fff7ed;
+
+            --status-healthy-text: #166534;
+            --status-healthy-bg: #f0fdf4;
+            --status-healthy-border: #bbf7d0;
+            --status-healthy-dot: #16a34a;
+
+            --status-warning-text: #9a3412;
+            --status-warning-bg: #fff7ed;
+            --status-warning-border: #fed7aa;
+            --status-warning-dot: #ea580c;
+
+            --status-danger-text: #991b1b;
+            --status-danger-bg: #fef2f2;
+            --status-danger-border: #fecaca;
+            --status-danger-dot: #dc2626;
+
+            --status-info-text: #075985;
+            --status-info-bg: #f0f9ff;
+            --status-info-border: #bae6fd;
+            --status-info-dot: #0284c7;
+
+            --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: var(--font-sans);
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
         }
 
         body {
@@ -69,59 +122,108 @@
         }
 
         .dashboard-container {
-            max-width: 1440px;
+            max-width: 1520px;
             margin: 0 auto;
-            padding: 24px 28px;
+            padding: 20px 24px 48px;
         }
 
-        /* 1. TOP HEADER */
+        /* 1. HEADER & TOP NAV */
         .header-bar {
             background-color: var(--bg-panel);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-lg);
-            padding: 18px 24px;
+            padding: 16px 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             box-shadow: var(--shadow-sm);
             margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 16px;
         }
 
-        .header-brand h1 {
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-badge {
+            background: linear-gradient(135deg, var(--accent-red), var(--accent-orange));
+            color: #ffffff;
+            font-weight: 800;
+            font-size: 0.95rem;
+            padding: 8px 12px;
+            border-radius: var(--radius-md);
+            letter-spacing: 0.05em;
+        }
+
+        .header-title-box h1 {
             font-size: 1.25rem;
             font-weight: 700;
             color: var(--text-primary);
             letter-spacing: -0.01em;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
 
-        .header-brand .subtitle {
+        .header-title-box .subtitle {
             font-size: 0.8125rem;
             color: var(--text-muted);
-            margin-top: 3px;
+            margin-top: 2px;
         }
 
-        .system-meta-tag {
-            display: inline-block;
-            font-size: 0.6875rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--primary-accent);
-            background-color: var(--primary-accent-subtle);
-            border: 1px solid var(--status-blue-border);
-            padding: 2px 8px;
-            border-radius: var(--radius-sm);
-            margin-left: 8px;
-            vertical-align: middle;
-        }
-
-        .header-controls {
+        .header-nav-controls {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .nav-link-btn {
+            font-size: 0.8125rem;
+            font-weight: 600;
+            padding: 7px 14px;
+            border-radius: var(--radius-md);
+            text-decoration: none;
+            color: var(--text-secondary);
+            background-color: var(--bg-panel-subtle);
+            border: 1px solid var(--border-color);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+
+        .nav-link-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--border-hover);
+        }
+
+        .nav-link-btn.active {
+            color: #ffffff;
+            background-color: var(--accent-red);
+            border-color: var(--accent-red);
+        }
+
+        .theme-toggle-btn {
+            background-color: var(--bg-panel-subtle);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 7px 14px;
+            border-radius: var(--radius-md);
+            font-size: 0.8125rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .theme-toggle-btn:hover {
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
         }
 
         .status-pill {
@@ -129,256 +231,181 @@
             align-items: center;
             gap: 6px;
             font-size: 0.75rem;
-            font-weight: 600;
-            padding: 5px 12px;
+            font-weight: 700;
+            padding: 6px 14px;
             border-radius: var(--radius-md);
-            letter-spacing: 0.02em;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
         }
 
         .status-pill-healthy {
-            background-color: var(--status-green-bg);
-            color: var(--status-green-text);
-            border: 1px solid var(--status-green-border);
+            background-color: var(--status-healthy-bg);
+            color: var(--status-healthy-text);
+            border: 1px solid var(--status-healthy-border);
         }
 
         .status-pill-warning {
-            background-color: var(--status-amber-bg);
-            color: var(--status-amber-text);
-            border: 1px solid var(--status-amber-border);
+            background-color: var(--status-warning-bg);
+            color: var(--status-warning-text);
+            border: 1px solid var(--status-warning-border);
         }
 
         .status-pill-critical {
-            background-color: var(--status-red-bg);
-            color: var(--status-red-text);
-            border: 1px solid var(--status-red-border);
+            background-color: var(--status-danger-bg);
+            color: var(--status-danger-text);
+            border: 1px solid var(--status-danger-border);
         }
 
         .status-dot {
-            width: 7px;
-            height: 7px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             display: inline-block;
         }
 
-        .status-dot-green { background-color: var(--status-green-dot); }
-        .status-dot-amber { background-color: var(--status-amber-dot); }
-        .status-dot-red   { background-color: var(--status-red-dot); }
-        .status-dot-blue  { background-color: var(--status-blue-dot); }
+        .status-dot-green { background-color: var(--status-healthy-dot); box-shadow: 0 0 6px var(--status-healthy-dot); }
+        .status-dot-amber { background-color: var(--status-warning-dot); box-shadow: 0 0 6px var(--status-warning-dot); }
+        .status-dot-red   { background-color: var(--status-danger-dot);  box-shadow: 0 0 6px var(--status-danger-dot); }
+        .status-dot-blue  { background-color: var(--status-info-dot); }
 
-        .time-badge {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            font-family: var(--font-mono);
-            background-color: var(--bg-subtle);
-            padding: 5px 10px;
-            border-radius: var(--radius-sm);
-            border: 1px solid var(--border-color);
-        }
-
-        /* Standard Buttons */
-        .btn {
-            font-size: 0.75rem;
-            font-weight: 600;
-            padding: 6px 14px;
-            border-radius: var(--radius-md);
-            cursor: pointer;
-            border: 1px solid transparent;
-            transition: background-color 0.15s, border-color 0.15s, color 0.15s;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            line-height: 1.25;
-        }
-
-        .btn-outline-danger {
-            background-color: #ffffff;
-            color: var(--status-red-text);
-            border-color: var(--status-red-border);
-        }
-        .btn-outline-danger:hover {
-            background-color: var(--status-red-bg);
-            border-color: var(--status-red-dot);
-        }
-
-        .btn-secondary {
-            background-color: #ffffff;
-            color: var(--text-secondary);
-            border-color: var(--border-color);
-        }
-        .btn-secondary:hover {
-            background-color: var(--bg-subtle);
-            border-color: var(--border-hover);
-        }
-
-        /* 2. RESEARCH ARCHITECTURE WORKFLOW STEPPER */
-        .pipeline-stepper {
-            background-color: var(--bg-panel);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-lg);
-            padding: 12px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: var(--shadow-sm);
-            margin-bottom: 20px;
-            overflow-x: auto;
-        }
-
-        .step-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.75rem;
-            white-space: nowrap;
-        }
-
-        .step-num {
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background-color: var(--bg-subtle);
-            color: var(--text-secondary);
-            font-weight: 700;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.6875rem;
-            border: 1px solid var(--border-color);
-        }
-
-        .step-label {
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-
-        .step-sub {
-            color: var(--text-muted);
-            font-size: 0.6875rem;
-        }
-
-        .step-arrow {
-            color: var(--text-subtle);
-            font-weight: bold;
-            font-size: 0.875rem;
-            user-select: none;
-            padding: 0 4px;
-        }
-
-        /* 3. SYSTEM OVERVIEW: COMPACT KPI ROW */
-        .kpi-row {
+        /* 2. OVERVIEW KPI CARDS */
+        .kpi-grid {
             display: grid;
-            grid-template-columns: repeat(5, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
             gap: 16px;
             margin-bottom: 24px;
         }
 
-        @media (max-width: 1200px) {
-            .kpi-row { grid-template-columns: repeat(3, 1fr); }
-        }
-        @media (max-width: 768px) {
-            .kpi-row { grid-template-columns: 1fr; }
+        .kpi-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: 16px 18px;
+            box-shadow: var(--shadow-card);
+            position: relative;
+            overflow: hidden;
         }
 
-        .kpi-card {
-            background-color: var(--bg-panel);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            padding: 16px;
-            box-shadow: var(--shadow-sm);
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--border-color);
         }
+
+        .kpi-card.accent-red::before { background: var(--accent-red); }
+        .kpi-card.accent-orange::before { background: var(--accent-orange); }
+        .kpi-card.accent-green::before { background: var(--status-healthy-dot); }
+        .kpi-card.accent-blue::before { background: var(--status-info-dot); }
 
         .kpi-label {
-            font-size: 0.6875rem;
+            font-size: 0.75rem;
+            color: var(--text-muted);
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            color: var(--text-muted);
-            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
-        .kpi-value {
+        .kpi-source-badge {
+            font-size: 0.625rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background: var(--bg-panel-subtle);
+            color: var(--text-subtle);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .kpi-val {
             font-size: 1.625rem;
             font-weight: 700;
             color: var(--text-primary);
+            margin: 8px 0 4px;
+            font-feature-settings: "tnum";
             font-variant-numeric: tabular-nums;
-            letter-spacing: -0.02em;
-            line-height: 1.2;
         }
 
-        .kpi-subtext {
+        .kpi-desc {
             font-size: 0.75rem;
             color: var(--text-muted);
-            margin-top: 6px;
-            font-family: var(--font-mono);
         }
 
-        /* Content Sections */
+        /* 3. SECTION PANELS */
         .section-block {
             background-color: var(--bg-panel);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-lg);
-            padding: 20px;
-            box-shadow: var(--shadow-panel);
+            padding: 20px 24px;
+            box-shadow: var(--shadow-card);
             margin-bottom: 24px;
         }
 
         .section-header {
             display: flex;
             justify-content: space-between;
-            align-items: baseline;
+            align-items: center;
             margin-bottom: 16px;
-            padding-bottom: 12px;
             border-bottom: 1px solid var(--border-subtle);
+            padding-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .section-title {
-            font-size: 0.9375rem;
+            font-size: 1.05rem;
             font-weight: 700;
             color: var(--text-primary);
-            letter-spacing: -0.01em;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
         .section-subtitle {
-            font-size: 0.75rem;
+            font-size: 0.8125rem;
             color: var(--text-muted);
-            font-weight: 400;
+            margin-top: 2px;
         }
 
-        /* 4. MICROSERVICE HEALTH TABLE */
-        .table-wrap {
+        /* 4. TABLES */
+        .table-responsive {
+            width: 100%;
             overflow-x: auto;
         }
 
-        table.data-table {
+        table.ops-table {
             width: 100%;
             border-collapse: collapse;
             font-size: 0.8125rem;
             text-align: left;
         }
 
-        table.data-table th {
-            background-color: var(--bg-subtle);
+        table.ops-table th {
+            background-color: var(--bg-panel-subtle);
             color: var(--text-muted);
             font-weight: 600;
-            font-size: 0.6875rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
             padding: 10px 14px;
             border-bottom: 1px solid var(--border-color);
+            text-transform: uppercase;
+            font-size: 0.6875rem;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
         }
 
-        table.data-table td {
+        table.ops-table td {
             padding: 12px 14px;
             border-bottom: 1px solid var(--border-subtle);
             color: var(--text-secondary);
             vertical-align: middle;
         }
 
-        table.data-table tr:hover td {
-            background-color: #fafbfc;
+        table.ops-table tr:hover td {
+            background-color: var(--bg-panel-subtle);
         }
 
         .service-name-cell {
@@ -390,100 +417,84 @@
         }
 
         .port-badge {
-            font-family: var(--font-mono);
+            font-family: ui-monospace, Menlo, Monaco, Consolas, monospace;
+            background-color: var(--bg-panel-subtle);
+            padding: 2px 7px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-color);
             font-size: 0.75rem;
             color: var(--text-muted);
         }
 
         .endpoint-link {
-            color: var(--primary-accent);
+            color: var(--accent-orange);
             text-decoration: none;
-            font-size: 0.75rem;
-            font-family: var(--font-mono);
+            font-weight: 600;
         }
-        .endpoint-link:hover {
-            text-decoration: underline;
-        }
+        .endpoint-link:hover { text-decoration: underline; }
 
         .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
+            font-size: 0.6875rem;
+            font-weight: 700;
             padding: 3px 8px;
             border-radius: var(--radius-sm);
-            font-size: 0.6875rem;
-            font-weight: 600;
-            letter-spacing: 0.02em;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
             text-transform: uppercase;
+            letter-spacing: 0.04em;
         }
 
         .badge-healthy {
-            background-color: var(--status-green-bg);
-            color: var(--status-green-text);
-            border: 1px solid var(--status-green-border);
+            background-color: var(--status-healthy-bg);
+            color: var(--status-healthy-text);
+            border: 1px solid var(--status-healthy-border);
         }
 
         .badge-warning {
-            background-color: var(--status-amber-bg);
-            color: var(--status-amber-text);
-            border: 1px solid var(--status-amber-border);
+            background-color: var(--status-warning-bg);
+            color: var(--status-warning-text);
+            border: 1px solid var(--status-warning-border);
         }
 
         .badge-danger {
-            background-color: var(--status-red-bg);
-            color: var(--status-red-text);
-            border: 1px solid var(--status-red-border);
+            background-color: var(--status-danger-bg);
+            color: var(--status-danger-text);
+            border: 1px solid var(--status-danger-border);
         }
 
         .badge-info {
-            background-color: var(--status-blue-bg);
-            color: var(--status-blue-text);
-            border: 1px solid var(--status-blue-border);
+            background-color: var(--status-info-bg);
+            color: var(--status-info-text);
+            border: 1px solid var(--status-info-border);
         }
 
-        .num-val {
-            font-family: var(--font-mono);
-            font-variant-numeric: tabular-nums;
-        }
-
-        /* 5. REAL-TIME TELEMETRY CARDS */
+        /* 5. TELEMETRY GAUGES & CHARTS */
         .telemetry-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 16px;
-        }
-
-        @media (max-width: 992px) {
-            .telemetry-grid { grid-template-columns: 1fr; }
+            margin-bottom: 16px;
         }
 
         .telemetry-card {
-            background-color: #ffffff;
+            background-color: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
-            padding: 16px;
+            padding: 16px 18px;
         }
 
         .telemetry-card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 14px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid var(--border-subtle);
-        }
-
-        .telemetry-card-title {
-            font-size: 0.875rem;
+            margin-bottom: 12px;
             font-weight: 700;
             color: var(--text-primary);
         }
 
         .metric-item {
-            margin-bottom: 12px;
-        }
-        .metric-item:last-child {
-            margin-bottom: 0;
+            margin-bottom: 10px;
         }
 
         .metric-meta {
@@ -493,419 +504,428 @@
             margin-bottom: 4px;
         }
 
-        .metric-meta .label {
-            color: var(--text-muted);
-        }
-
-        .metric-meta .value {
-            font-family: var(--font-mono);
-            font-weight: 600;
-            color: var(--text-primary);
-        }
+        .metric-meta .label { color: var(--text-muted); }
+        .metric-meta .value { font-weight: 600; color: var(--text-primary); }
 
         .meter-bar-bg {
+            background-color: var(--bg-panel-subtle);
+            border-radius: 4px;
             height: 6px;
-            background-color: var(--bg-subtle);
-            border-radius: 3px;
             overflow: hidden;
+            border: 1px solid var(--border-subtle);
         }
 
         .meter-bar-fill {
             height: 100%;
-            background-color: var(--primary-accent);
-            border-radius: 3px;
-            transition: width 0.3s ease, background-color 0.3s ease;
+            border-radius: 4px;
+            transition: width 0.3s ease;
         }
 
-        /* 6. ANOMALY DETECTION CARDS */
-        .anomaly-grid {
+        /* 6. CHARTS ROW */
+        .chart-row {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
             gap: 16px;
+            margin-top: 16px;
         }
 
-        @media (max-width: 992px) {
-            .anomaly-grid { grid-template-columns: 1fr; }
-        }
-
-        .anomaly-card {
-            background-color: #ffffff;
+        .chart-card {
+            background-color: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
             padding: 16px;
+            height: 260px;
+            position: relative;
         }
 
-        .anomaly-card-top {
+        .chart-card-title {
+            font-size: 0.8125rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
-        }
-
-        .anomaly-spec-row {
-            display: flex;
             justify-content: space-between;
-            font-size: 0.75rem;
-            padding: 6px 0;
-            border-bottom: 1px solid var(--border-subtle);
-        }
-        .anomaly-spec-row:last-child {
-            border-bottom: none;
         }
 
-        .anomaly-spec-label {
-            color: var(--text-muted);
-        }
-
-        .anomaly-spec-val {
-            font-weight: 600;
-            color: var(--text-secondary);
-            font-family: var(--font-mono);
-        }
-
-        .window-step-track {
-            display: flex;
-            gap: 4px;
-            margin-top: 10px;
-        }
-
-        .window-block {
-            flex: 1;
-            height: 6px;
-            background-color: var(--bg-subtle);
-            border-radius: 2px;
-        }
-
-        .window-block-active {
-            background-color: var(--status-red-dot);
-        }
-
-        .window-block-clean {
-            background-color: var(--status-green-dot);
-        }
-
-        /* 7. CONTROLLED FAULT INJECTION (CHAOS) */
-        .chaos-service-group {
+        /* 7. CHAOS & REMEDIATION CONSOLE */
+        .chaos-panel {
+            background-color: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: var(--radius-md);
-            padding: 14px 16px;
-            margin-bottom: 12px;
+            padding: 16px 18px;
+            margin-top: 12px;
+        }
+
+        .chaos-service-group {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            background-color: #ffffff;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-subtle);
+            flex-wrap: wrap;
+            gap: 12px;
         }
-        .chaos-service-group:last-child {
-            margin-bottom: 0;
-        }
+
+        .chaos-service-group:last-child { border-bottom: none; }
 
         .chaos-service-info {
             display: flex;
             align-items: center;
-            gap: 10px;
-        }
-
-        .chaos-service-name {
+            gap: 8px;
             font-weight: 600;
             color: var(--text-primary);
-            font-size: 0.8125rem;
+            min-width: 180px;
         }
 
         .chaos-btn-cluster {
             display: flex;
+            align-items: center;
+            gap: 8px;
             flex-wrap: wrap;
-            gap: 6px;
         }
 
         .btn-action {
-            font-size: 0.6875rem;
-            font-weight: 600;
-            padding: 5px 10px;
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            border: 1px solid var(--border-color);
-            background-color: #ffffff;
+            background-color: var(--bg-panel-subtle);
             color: var(--text-secondary);
-            transition: all 0.15s;
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
         }
 
         .btn-action:hover {
             border-color: var(--border-hover);
-            background-color: var(--bg-subtle);
-        }
-
-        .btn-action-slow:hover {
-            background-color: var(--status-amber-bg);
-            border-color: var(--status-amber-border);
-            color: var(--status-amber-text);
-        }
-
-        .btn-action-error:hover {
-            background-color: var(--status-red-bg);
-            border-color: var(--status-red-border);
-            color: var(--status-red-text);
-        }
-
-        .btn-action-memory:hover {
-            background-color: var(--primary-accent-subtle);
-            border-color: var(--status-blue-border);
-            color: var(--primary-accent);
-        }
-
-        .btn-action-heal {
-            background-color: var(--status-green-bg);
-            border-color: var(--status-green-border);
-            color: var(--status-green-text);
-        }
-        .btn-action-heal:hover {
-            background-color: #dcfce7;
-            border-color: var(--status-green-dot);
-        }
-
-        /* 8. INFRASTRUCTURE & PERSISTENCE TIERS */
-        .infra-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 14px;
-        }
-
-        @media (max-width: 992px) {
-            .infra-grid { grid-template-columns: repeat(2, 1fr); }
-        }
-        @media (max-width: 576px) {
-            .infra-grid { grid-template-columns: 1fr; }
-        }
-
-        .infra-card {
-            background-color: #ffffff;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            padding: 14px;
-        }
-
-        .infra-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 6px;
-        }
-
-        .infra-card-title {
-            font-weight: 600;
-            font-size: 0.8125rem;
             color: var(--text-primary);
         }
 
-        .infra-card-desc {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            line-height: 1.4;
+        .btn-action-slow:hover {
+            background-color: var(--accent-orange-subtle);
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
         }
 
-        /* Toast Message */
+        .btn-action-error:hover {
+            background-color: var(--accent-red-subtle);
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+        }
+
+        .btn-action-memory:hover {
+            background-color: rgba(168, 85, 247, 0.12);
+            border-color: #a855f7;
+            color: #c084fc;
+        }
+
+        .btn-action-heal {
+            background-color: var(--status-healthy-bg);
+            border-color: var(--status-healthy-border);
+            color: var(--status-healthy-text);
+        }
+
+        .btn-action-heal:hover {
+            background-color: var(--status-healthy-dot);
+            color: #ffffff;
+        }
+
+        /* 8. MODAL / DIALOG */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-box {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 480px;
+            padding: 24px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        .modal-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .modal-desc {
+            font-size: 0.8125rem;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 10px 12px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-size: 0.875rem;
+            margin-bottom: 16px;
+            font-family: monospace;
+        }
+
+        .modal-input:focus {
+            outline: none;
+            border-color: var(--accent-orange);
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* TOAST NOTIFICATION */
         #toast {
+            display: none;
             position: fixed;
             bottom: 24px;
             right: 24px;
-            background-color: var(--text-primary);
-            color: #ffffff;
-            padding: 10px 18px;
+            background-color: #181b26;
+            color: #f8fafc;
+            border: 1px solid var(--accent-orange);
+            padding: 12px 20px;
             border-radius: var(--radius-md);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            box-shadow: var(--shadow-card);
             font-size: 0.8125rem;
-            font-weight: 500;
-            display: none;
-            z-index: 9999;
-            border-left: 4px solid var(--primary-accent);
+            font-weight: 600;
+            z-index: 1100;
         }
 
-        /* Footer */
         .footer-note {
             text-align: center;
             font-size: 0.75rem;
             color: var(--text-muted);
-            margin-top: 12px;
-            padding-bottom: 24px;
+            margin-top: 32px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-subtle);
         }
     </style>
 </head>
 <body>
-
     <div class="dashboard-container">
-
-        <!-- 1. TOP HEADER -->
+        <!-- 1. TOP HEADER & NAVIGATION -->
         <header class="header-bar">
             <div class="header-brand">
-                <h1>
-                    Self-Healing Microservice Gateway
-                    <span class="system-meta-tag">Autonomous Self-Healing Cloud Operations Center</span>
-                </h1>
-                <p class="subtitle">ML-driven monitoring, anomaly detection and automated recovery</p>
+                <span class="brand-badge">SWEA &bull; LOFO</span>
+                <div class="header-title-box">
+                    <h1>Autonomous Self-Healing Cloud Operations Center</h1>
+                    <div class="subtitle">ML-Driven Anomaly Detection &bull; Thompson Sampling Recovery &bull; Dependency Root-Cause Suppression</div>
+                </div>
             </div>
-            <div class="header-controls">
+
+            <div class="header-nav-controls">
+                <!-- Navigation Links -->
+                <a href="/dashboard" class="nav-link-btn active">&#128202; Dashboard</a>
+                <a href="/info" class="nav-link-btn">&#128214; Project Information</a>
+
+                <!-- Admin Key Configuration Button -->
+                <button class="nav-link-btn" onclick="openAdminKeyModal()">&#128273; Admin Key</button>
+
+                <!-- Full Reset Button -->
+                <button class="nav-link-btn" style="color: var(--accent-red);" onclick="resetAll()">&#129529; Reset System</button>
+
+                <!-- Dark / Light Mode Toggle -->
+                <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">
+                    <span id="themeToggleIcon">&#127769;</span> <span id="themeToggleText">Dark</span>
+                </button>
+
+                <!-- Overall Status Pill -->
                 <div class="status-pill status-pill-healthy" id="systemStatusPill">
                     <span class="status-dot status-dot-green" id="systemStatusDot"></span>
                     <span id="systemStatusLabel">HEALTHY</span>
                 </div>
-                <div class="time-badge" id="lastUpdatedTime">Updated: --:--:--</div>
-                <div class="status-pill status-pill-healthy" style="background-color: var(--bg-subtle); border-color: var(--border-color); color: var(--text-muted);">
-                    <span class="status-dot status-dot-blue"></span>
-                    <span id="liveStatus">Live (3s)</span>
-                </div>
-                <button class="btn btn-outline-danger" onclick="resetAll()">Reset System</button>
             </div>
         </header>
 
-        <!-- 2. SYSTEM FLOW (Academic Research Architecture Pipeline) -->
-        <div class="pipeline-stepper">
-            <div class="step-item">
-                <span class="step-num">1</span>
-                <div>
-                    <div class="step-label">Telemetry Stream</div>
-                    <div class="step-sub">Actuator aggregation (5s)</div>
+        <!-- 2. SYSTEM OVERVIEW CARDS (KPIs) -->
+        <section class="kpi-grid">
+            <!-- Cluster Health -->
+            <div class="kpi-card accent-green">
+                <div class="kpi-label">
+                    <span>Cluster Health</span>
+                    <span class="kpi-source-badge">LIVE STATUS</span>
                 </div>
+                <div class="kpi-val" id="kpiClusterStatus" style="color: var(--status-healthy-dot);">HEALTHY</div>
+                <div class="kpi-desc" id="kpiActiveAnomalies">0 Active Confirmations</div>
             </div>
-            <span class="step-arrow">&rarr;</span>
-            <div class="step-item">
-                <span class="step-num">2</span>
-                <div>
-                    <div class="step-label">ML Anomaly Detection</div>
-                    <div class="step-sub">Isolation Forest (:5000)</div>
-                </div>
-            </div>
-            <span class="step-arrow">&rarr;</span>
-            <div class="step-item">
-                <span class="step-num">3</span>
-                <div>
-                    <div class="step-label">Anomaly Confirmation</div>
-                    <div class="step-sub">Sliding Window (K=3)</div>
-                </div>
-            </div>
-            <span class="step-arrow">&rarr;</span>
-            <div class="step-item">
-                <span class="step-num">4</span>
-                <div>
-                    <div class="step-label">Healing Engine</div>
-                    <div class="step-sub">Restart &amp; Protection Mode</div>
-                </div>
-            </div>
-            <span class="step-arrow">&rarr;</span>
-            <div class="step-item">
-                <span class="step-num">5</span>
-                <div>
-                    <div class="step-label">Recovery Verification</div>
-                    <div class="step-sub">Health probe &amp; Audit log</div>
-                </div>
-            </div>
-        </div>
 
-        <!-- 3. SYSTEM OVERVIEW: COMPACT KPI ROW -->
-        <section class="kpi-row">
-            <div class="kpi-card">
-                <div class="kpi-label">Self-Healing Success Rate</div>
-                <div class="kpi-value" id="kpiSuccessRate" style="color: var(--status-green-text);">100.0%</div>
-                <div class="kpi-subtext">Target SLA: &ge; 90.0%</div>
+            <!-- Monitored Microservices -->
+            <div class="kpi-card accent-blue">
+                <div class="kpi-label">
+                    <span>Monitored Nodes</span>
+                    <span class="kpi-source-badge">TOPOLOGY</span>
+                </div>
+                <div class="kpi-val" id="kpiNodesCount">5 Nodes</div>
+                <div class="kpi-desc">3 Microservices &bull; Gateway &bull; ML Daemon</div>
             </div>
-            <div class="kpi-card">
-                <div class="kpi-label">Mean Time to Detect (MTTD)</div>
-                <div class="kpi-value" id="kpiMttd" style="color: var(--primary-accent);">17.8 s</div>
-                <div class="kpi-subtext">Target SLA: &lt; 25.0s (5s cycle)</div>
+
+            <!-- Healing Success Rate -->
+            <div class="kpi-card accent-orange">
+                <div class="kpi-label">
+                    <span>Healing Success Rate</span>
+                    <span class="kpi-source-badge">VERIFIED OUTCOMES</span>
+                </div>
+                <div class="kpi-val" id="kpiSuccessRate">100.0%</div>
+                <div class="kpi-desc" id="kpiRecoveredCount">0 Verified Recovered</div>
             </div>
-            <div class="kpi-card">
-                <div class="kpi-label">Mean Time to Recover (MTTR)</div>
-                <div class="kpi-value" id="kpiMttr" style="color: var(--status-blue-text);">2.8 s</div>
-                <div class="kpi-subtext">Target SLA: &lt; 15.0s</div>
+
+            <!-- Average Cluster Latency -->
+            <div class="kpi-card accent-red">
+                <div class="kpi-label">
+                    <span>Cluster Latency</span>
+                    <span class="kpi-source-badge">LIVE TELEMETRY</span>
+                </div>
+                <div class="kpi-val" id="kpiAvgLatency">-- ms</div>
+                <div class="kpi-desc" id="kpiLatencyStatus">Telemetry Polling Active</div>
             </div>
-            <div class="kpi-card">
-                <div class="kpi-label">Total Remediations</div>
-                <div class="kpi-value" id="kpiTotalActions">0</div>
-                <div class="kpi-subtext" id="kpiRecoveredCount">0 Verified Recovered</div>
+
+            <!-- Error Rate -->
+            <div class="kpi-card accent-red">
+                <div class="kpi-label">
+                    <span>Error Rate</span>
+                    <span class="kpi-source-badge">LIVE TELEMETRY</span>
+                </div>
+                <div class="kpi-val" id="kpiAvgError">0.0%</div>
+                <div class="kpi-desc" id="kpiErrorStatus">HTTP 5xx Rate Across Fleet</div>
             </div>
-            <div class="kpi-card">
-                <div class="kpi-label">Database Status</div>
-                <div class="kpi-value" id="kpiDbEngine" style="font-size: 1.25rem;">CONNECTED</div>
-                <div class="kpi-subtext" id="kpiDbDialect">MySQL / H2 (0 telemetry rows)</div>
+
+            <!-- ML Isolation Forest Metadata -->
+            <div class="kpi-card accent-blue">
+                <div class="kpi-label">
+                    <span>ML Decision Boundary</span>
+                    <span class="kpi-source-badge">CALIBRATED THRESHOLD</span>
+                </div>
+                <div class="kpi-val" style="font-size: 1.25rem; font-family: monospace;">&theta; = -0.5140</div>
+                <div class="kpi-desc">FPR &le; 5% Target &bull; Contamination: 0.04</div>
             </div>
         </section>
 
-        <!-- 4. MICROSERVICE HEALTH -->
+        <!-- 3. SERVICE FLEET HEALTH MONITORING -->
         <section class="section-block">
             <div class="section-header">
                 <div>
-                    <h2 class="section-title">Microservice Health</h2>
-                    <p class="section-subtitle">Downstream Microservices & Real-Time Telemetry: operational health, error rate, and routing latencies.</p>
+                    <h2 class="section-title">&#128065; Monitored Microservice Fleet</h2>
+                    <p class="section-subtitle">Real-time health telemetry, anomaly state machines, and latency metrics across Spring Cloud Gateway routes.</p>
+                </div>
+                <div>
+                    <span class="kpi-source-badge" id="lastUpdatedTime">Updated: --:--:--</span>
                 </div>
             </div>
-            <div class="table-wrap">
-                <table class="data-table">
+
+            <div class="table-responsive">
+                <table class="ops-table">
                     <thead>
                         <tr>
-                            <th>Service Name</th>
+                            <th>Service Identifier</th>
                             <th>Port</th>
                             <th>Gateway Route</th>
-                            <th>Health</th>
-                            <th>Anomaly State</th>
-                            <th>Latency</th>
+                            <th>Liveness Status</th>
+                            <th>Anomaly Detection State</th>
+                            <th>Response Latency</th>
                             <th>Error Rate</th>
                             <th>Throughput</th>
                         </tr>
                     </thead>
                     <tbody id="servicesHealthTableBody">
-                        <!-- Populated by JavaScript -->
+                        <tr>
+                            <td colspan="8" style="text-align: center; padding: 24px; color: var(--text-muted);">
+                                Loading cluster telemetry...
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
         </section>
 
-        <!-- 5. REAL-TIME TELEMETRY -->
+        <!-- 4. REAL-TIME TELEMETRY VISUALIZATIONS & METERS -->
         <section class="section-block">
             <div class="section-header">
                 <div>
-                    <h2 class="section-title">Real-Time Telemetry</h2>
-                    <p class="section-subtitle">Multivariate resource observations monitored across Order, Payment, and Inventory microservices.</p>
+                    <h2 class="section-title">&#128200; Fleet Telemetry &amp; Resource Utilization</h2>
+                    <p class="section-subtitle">Multivariate 5-feature telemetry vectors polled every 5 seconds for Isolation Forest evaluation.</p>
                 </div>
             </div>
+
             <div class="telemetry-grid" id="telemetryCardsGrid">
-                <!-- Populated by JavaScript -->
+                <!-- Dynamically populated by pollDashboard() -->
+            </div>
+
+            <!-- Real-Time Trend Charts -->
+            <div class="chart-row">
+                <div class="chart-card">
+                    <div class="chart-card-title">
+                        <span>Latency &bull; Response Time Trend (ms)</span>
+                        <span class="kpi-source-badge">ROLLING 15 SAMPLES</span>
+                    </div>
+                    <canvas id="latencyChart"></canvas>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-card-title">
+                        <span>Error Rate &amp; CPU Utilization (%)</span>
+                        <span class="kpi-source-badge">ROLLING 15 SAMPLES</span>
+                    </div>
+                    <canvas id="errorCpuChart"></canvas>
+                </div>
             </div>
         </section>
 
-        <!-- 6. ANOMALY DETECTION -->
+        <!-- 5. ANOMALY DETECTION & HYSTERESIS (SWEA ACCUMULATION) -->
         <section class="section-block">
             <div class="section-header">
                 <div>
-                    <h2 class="section-title">Anomaly Detection</h2>
-                    <p class="section-subtitle">Machine learning inference (Isolation Forest) and sliding-window anti-flapping confirmation.</p>
+                    <h2 class="section-title">&#129514; Anomaly Confirmation &amp; Anti-Flapping Hysteresis</h2>
+                    <p class="section-subtitle">Severity-Weighted Evidence Accumulation (SWEA) and Sliding Window Confirmation.</p>
                 </div>
             </div>
-            <div class="anomaly-grid" id="anomalyCardsGrid">
-                <!-- Populated by JavaScript -->
+            <div class="telemetry-grid" id="anomalyCardsGrid">
+                <!-- Populated dynamically -->
             </div>
         </section>
 
-        <!-- 7. SELF-HEALING ACTIVITY -->
+        <!-- 6. CLOSED-LOOP HEALING ACTIVITY & AUDIT TRAIL -->
         <section class="section-block">
             <div class="section-header">
                 <div>
-                    <h2 class="section-title">Self-Healing Activity</h2>
-                    <p class="section-subtitle">Autonomous Healing Immutable Audit Trail: remediation actions, cooldown enforcement, and post-recovery probe verification.</p>
+                    <h2 class="section-title">&#128737; Autonomous Remediation &amp; Recovery Audit Trail</h2>
+                    <p class="section-subtitle">Immutable log of autonomous recovery actions (Thompson Sampling, Rate-Limiting, Traffic Redirection, Restarts).</p>
                 </div>
             </div>
-            <div class="table-wrap">
-                <table class="data-table">
+
+            <div class="table-responsive">
+                <table class="ops-table">
                     <thead>
                         <tr>
                             <th>Timestamp</th>
-                            <th>Service</th>
-                            <th>Remediation Action</th>
-                            <th>Trigger Reason</th>
-                            <th>Recovery Status</th>
-                            <th>Duration</th>
+                            <th>Target Service</th>
+                            <th>Action Type</th>
+                            <th>Diagnosis / Trigger Reason</th>
+                            <th>Verification Status</th>
+                            <th>Recovery Latency</th>
                         </tr>
                     </thead>
                     <tbody id="auditTableBody">
                         <tr>
-                            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">
+                            <td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">
                                 No remediation events recorded yet. Controlled faults can be injected below to observe autonomous self-healing.
                             </td>
                         </tr>
@@ -914,101 +934,98 @@
             </div>
         </section>
 
-        <!-- 8. CONTROLLED FAULT INJECTION (CHAOS TESTING) -->
+        <!-- 7. CHAOS INJECTION & FAULT SIMULATION CONSOLE -->
         <section class="section-block">
             <div class="section-header">
                 <div>
-                    <h2 class="section-title">Controlled Fault Injection</h2>
-                    <p class="section-subtitle">Controlled faults are used to evaluate anomaly detection and automated recovery.</p>
-                </div>
-                <button class="btn btn-secondary" onclick="resetAll()">Reset All Cluster States</button>
-            </div>
-
-            <!-- Order Service -->
-            <div class="chaos-service-group">
-                <div class="chaos-service-info">
-                    <span class="status-dot status-dot-green"></span>
-                    <span class="chaos-service-name">Order Service</span>
-                    <span class="port-badge">:8081</span>
-                </div>
-                <div class="chaos-btn-cluster">
-                    <button class="btn-action btn-action-slow" onclick="triggerChaos('order-service', 'slow', '1600')">Slow Latency (+1.6s)</button>
-                    <button class="btn-action btn-action-error" onclick="triggerChaos('order-service', 'error', '')">HTTP 500 Error</button>
-                    <button class="btn-action btn-action-memory" onclick="triggerChaos('order-service', 'memory', '50')">Heap Stress (50MB)</button>
-                    <button class="btn-action" onclick="triggerChaos('order-service', 'reset', '')">Clear Fault</button>
-                    <button class="btn-action btn-action-heal" onclick="triggerHeal('order-service')">Trigger Heal</button>
+                    <h2 class="section-title">&#9889; Interactive Chaos Injection &amp; Demonstration Console</h2>
+                    <p class="section-subtitle">Controlled fault simulation for dissertation viva evaluation. Protected by <strong>X-Admin-Key</strong> authentication.</p>
                 </div>
             </div>
 
-            <!-- Payment Service -->
-            <div class="chaos-service-group">
-                <div class="chaos-service-info">
-                    <span class="status-dot status-dot-green"></span>
-                    <span class="chaos-service-name">Payment Service</span>
-                    <span class="port-badge">:8082</span>
+            <div class="chaos-panel">
+                <!-- Order Service -->
+                <div class="chaos-service-group">
+                    <div class="chaos-service-info">
+                        <span class="status-dot status-dot-green"></span>
+                        <span>Order Service</span>
+                        <span class="port-badge">:8081</span>
+                    </div>
+                    <div class="chaos-btn-cluster">
+                        <button class="btn-action btn-action-slow" onclick="triggerChaos('order-service', 'slow', '1600')">&#9201; Slow Latency (1.6s)</button>
+                        <button class="btn-action btn-action-error" onclick="triggerChaos('order-service', 'error', '')">&#128165; HTTP 500 Error</button>
+                        <button class="btn-action btn-action-memory" onclick="triggerChaos('order-service', 'memory', '50')">&#129504; Memory Stress</button>
+                        <button class="btn-action" onclick="triggerChaos('order-service', 'reset', '')">&#129529; Clear Fault</button>
+                        <button class="btn-action btn-action-heal" onclick="triggerHeal('order-service')">&#128737; Trigger Heal</button>
+                    </div>
                 </div>
-                <div class="chaos-btn-cluster">
-                    <button class="btn-action btn-action-slow" onclick="triggerChaos('payment-service', 'slow', '1600')">Slow Latency (+1.6s)</button>
-                    <button class="btn-action btn-action-error" onclick="triggerChaos('payment-service', 'error', '')">HTTP 500 Error</button>
-                    <button class="btn-action btn-action-memory" onclick="triggerChaos('payment-service', 'memory', '50')">Heap Stress (50MB)</button>
-                    <button class="btn-action" onclick="triggerChaos('payment-service', 'reset', '')">Clear Fault</button>
-                    <button class="btn-action btn-action-heal" onclick="triggerHeal('payment-service')">Trigger Heal</button>
-                </div>
-            </div>
 
-            <!-- Inventory Service -->
-            <div class="chaos-service-group">
-                <div class="chaos-service-info">
-                    <span class="status-dot status-dot-green"></span>
-                    <span class="chaos-service-name">Inventory Service</span>
-                    <span class="port-badge">:8083</span>
+                <!-- Payment Service -->
+                <div class="chaos-service-group">
+                    <div class="chaos-service-info">
+                        <span class="status-dot status-dot-green"></span>
+                        <span>Payment Service</span>
+                        <span class="port-badge">:8082</span>
+                    </div>
+                    <div class="chaos-btn-cluster">
+                        <button class="btn-action btn-action-slow" onclick="triggerChaos('payment-service', 'slow', '1600')">&#9201; Slow Latency (1.6s)</button>
+                        <button class="btn-action btn-action-error" onclick="triggerChaos('payment-service', 'error', '')">&#128165; HTTP 500 Error</button>
+                        <button class="btn-action btn-action-memory" onclick="triggerChaos('payment-service', 'memory', '50')">&#129504; Memory Stress</button>
+                        <button class="btn-action" onclick="triggerChaos('payment-service', 'reset', '')">&#129529; Clear Fault</button>
+                        <button class="btn-action btn-action-heal" onclick="triggerHeal('payment-service')">&#128737; Trigger Heal</button>
+                    </div>
                 </div>
-                <div class="chaos-btn-cluster">
-                    <button class="btn-action btn-action-slow" onclick="triggerChaos('inventory-service', 'slow', '1600')">Slow Latency (+1.6s)</button>
-                    <button class="btn-action btn-action-error" onclick="triggerChaos('inventory-service', 'error', '')">HTTP 500 Error</button>
-                    <button class="btn-action btn-action-memory" onclick="triggerChaos('inventory-service', 'memory', '50')">Heap Stress (50MB)</button>
-                    <button class="btn-action" onclick="triggerChaos('inventory-service', 'reset', '')">Clear Fault</button>
-                    <button class="btn-action btn-action-heal" onclick="triggerHeal('inventory-service')">Trigger Heal</button>
+
+                <!-- Inventory Service -->
+                <div class="chaos-service-group">
+                    <div class="chaos-service-info">
+                        <span class="status-dot status-dot-green"></span>
+                        <span>Inventory Service</span>
+                        <span class="port-badge">:8083</span>
+                    </div>
+                    <div class="chaos-btn-cluster">
+                        <button class="btn-action btn-action-slow" onclick="triggerChaos('inventory-service', 'slow', '1600')">&#9201; Slow Latency (1.6s)</button>
+                        <button class="btn-action btn-action-error" onclick="triggerChaos('inventory-service', 'error', '')">&#128165; HTTP 500 Error</button>
+                        <button class="btn-action btn-action-memory" onclick="triggerChaos('inventory-service', 'memory', '50')">&#129504; Memory Stress</button>
+                        <button class="btn-action" onclick="triggerChaos('inventory-service', 'reset', '')">&#129529; Clear Fault</button>
+                        <button class="btn-action btn-action-heal" onclick="triggerHeal('inventory-service')">&#128737; Trigger Heal</button>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <!-- 9. INFRASTRUCTURE & MACHINE LEARNING -->
+        <!-- 8. INFRASTRUCTURE & BACKEND NODES -->
         <section class="section-block">
             <div class="section-header">
                 <div>
-                    <h2 class="section-title">Infrastructure & Machine Learning</h2>
-                    <p class="section-subtitle">Routing core, ML anomaly detection service, and persistence tier status.</p>
+                    <h2 class="section-title">&#128187; Infrastructure Nodes &amp; Database Engine</h2>
+                    <p class="section-subtitle">Core routing gateway, Flask ML isolation forest daemon, and relational policy persistence.</p>
                 </div>
             </div>
-            <div class="infra-grid">
-                <div class="infra-card">
-                    <div class="infra-card-header">
-                        <span class="infra-card-title">Spring Cloud Gateway</span>
-                        <span class="badge badge-healthy">UP</span>
-                    </div>
-                    <div class="infra-card-desc">Port 8080 &bull; Netty Reactive Router &bull; Rate Limit &amp; Fallback Filter</div>
+
+            <div class="kpi-grid">
+                <div class="kpi-card accent-blue">
+                    <div class="kpi-label"><span>Spring Cloud Gateway</span><span class="kpi-source-badge">:8080</span></div>
+                    <div class="kpi-val" style="font-size: 1.2rem;">ONLINE</div>
+                    <div class="kpi-desc">Netty Reactive Router &bull; Security &amp; Admin Filters</div>
                 </div>
-                <div class="infra-card">
-                    <div class="infra-card-header">
-                        <span class="infra-card-title">Flask ML Service</span>
-                        <span class="badge badge-healthy" id="mlStatusBadge">UP</span>
-                    </div>
-                    <div class="infra-card-desc">Port 5000 &bull; Isolation Forest &bull; 100 Trees &bull; Contamination 0.14</div>
+
+                <div class="kpi-card accent-orange">
+                    <div class="kpi-label"><span>Flask ML Service</span><span class="kpi-source-badge">:5000</span></div>
+                    <div class="kpi-val" style="font-size: 1.2rem;" id="mlStatusText">ONLINE</div>
+                    <div class="kpi-desc">Isolation Forest &bull; 100 Trees &bull; &theta; = -0.5140</div>
                 </div>
-                <div class="infra-card">
-                    <div class="infra-card-header">
-                        <span class="infra-card-title">Persistence Data Store</span>
-                        <span class="badge badge-healthy" id="dbStatusBadge">UP</span>
-                    </div>
-                    <div class="infra-card-desc" id="dbItemDetails">Relational Persistence Active</div>
+
+                <div class="kpi-card accent-green">
+                    <div class="kpi-label"><span>Relational Persistence</span><span class="kpi-source-badge">:3306</span></div>
+                    <div class="kpi-val" style="font-size: 1.2rem;" id="dbStatusText">CONNECTED</div>
+                    <div class="kpi-desc" id="dbInfoText">MySQL / H2 Mode &bull; policy_stats Active</div>
                 </div>
-                <div class="infra-card">
-                    <div class="infra-card-header">
-                        <span class="infra-card-title">Engine Mitigations</span>
-                        <span class="badge badge-healthy" id="mitigationsBadge">NORMAL</span>
-                    </div>
-                    <div class="infra-card-desc" id="activeMitigationsCount">0 Redirections, 0 Rate Limits</div>
+
+                <div class="kpi-card accent-red">
+                    <div class="kpi-label"><span>Active Mitigations</span><span class="kpi-source-badge">GATEWAY</span></div>
+                    <div class="kpi-val" style="font-size: 1.2rem;" id="activeMitigationsCount">0 Active</div>
+                    <div class="kpi-desc" id="mitigationsBadge">Normal Operation</div>
                 </div>
             </div>
         </section>
@@ -1021,61 +1038,181 @@
         </footer>
     </div>
 
-    <!-- Toast Notification -->
+    <!-- ADMIN KEY CONFIGURATION MODAL -->
+    <div class="modal-backdrop" id="adminKeyModal">
+        <div class="modal-box">
+            <div class="modal-title">&#128273; Configure Administrator API Key</div>
+            <div class="modal-desc">
+                Administrative operations (chaos fault injection, manual healing triggers, system reset) require a valid <code>X-Admin-Key</code> header. Set your key below to authenticate dashboard actions.
+            </div>
+            <label for="adminKeyInput" style="display:block; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 6px;">ADMIN API KEY</label>
+            <input type="password" id="adminKeyInput" class="modal-input" placeholder="Enter your X-Admin-Key (from ADMIN_API_KEY)" value="">
+            <div class="modal-actions">
+                <button class="nav-link-btn" onclick="closeAdminKeyModal()">Cancel</button>
+                <button class="nav-link-btn active" onclick="saveAdminKey()">Save Key</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
     <div id="toast"></div>
 
     <script>
+        // --- 1. THEME SWITCHER (Dark / Light) ---
+        function initTheme() {
+            const savedTheme = localStorage.getItem('self-healing-theme') || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeButton(savedTheme);
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme') || 'dark';
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('self-healing-theme', next);
+            updateThemeButton(next);
+            updateChartTheme(next);
+        }
+
+        function updateThemeButton(theme) {
+            const icon = document.getElementById('themeToggleIcon');
+            const text = document.getElementById('themeToggleText');
+            if (theme === 'dark') {
+                icon.textContent = '🌙';
+                text.textContent = 'Dark';
+            } else {
+                icon.textContent = '☀️';
+                text.textContent = 'Light';
+            }
+        }
+
+        // --- 2. ADMIN KEY AUTHENTICATION MANAGEMENT ---
+        function getAdminKey() {
+            return localStorage.getItem('self-healing-admin-key') || '';
+        }
+
+        function openAdminKeyModal() {
+            document.getElementById('adminKeyInput').value = getAdminKey();
+            document.getElementById('adminKeyModal').style.display = 'flex';
+        }
+
+        function closeAdminKeyModal() {
+            document.getElementById('adminKeyModal').style.display = 'none';
+        }
+
+        function saveAdminKey() {
+            const val = document.getElementById('adminKeyInput').value.trim();
+            if (val) {
+                localStorage.setItem('self-healing-admin-key', val);
+                showToast("Admin Key saved successfully for dashboard requests.");
+            } else {
+                localStorage.removeItem('self-healing-admin-key');
+                showToast("Admin Key cleared.");
+            }
+            closeAdminKeyModal();
+        }
+
+        // --- 3. TOAST NOTIFICATIONS ---
         function showToast(msg) {
             const toast = document.getElementById("toast");
             toast.textContent = msg;
             toast.style.display = "block";
-            setTimeout(() => { toast.style.display = "none"; }, 3000);
+            setTimeout(() => { toast.style.display = "none"; }, 4000);
         }
 
+        // --- 4. SECURE ADMINISTRATIVE & CHAOS ACTIONS ---
         function triggerChaos(service, type, val) {
+            const adminKey = getAdminKey();
+            if (!adminKey) {
+                showToast("Admin Key required: Click 'Admin Key' in header to configure authentication.");
+                openAdminKeyModal();
+                return;
+            }
             showToast(`Injecting ${type} fault into ${service}...`);
+
             fetch(`/api/dashboard/chaos/trigger?service=${encodeURIComponent(service)}&type=${encodeURIComponent(type)}&value=${encodeURIComponent(val || '')}`, {
-                method: "POST"
+                method: "POST",
+                headers: {
+                    'X-Admin-Key': adminKey
+                }
             })
-            .then(r => r.json())
+            .then(r => {
+                if (r.status === 401 || r.status === 403) {
+                    throw new Error(`Authentication Failed (${r.status}): Invalid or missing X-Admin-Key. Configure via 'Admin Key' button.`);
+                }
+                return r.json();
+            })
             .then(data => {
                 showToast(`Fault injected: ${service} -> ${type}`);
                 pollDashboard();
             })
             .catch(err => {
-                showToast(`Chaos trigger error: ${err}`);
+                showToast(`Chaos trigger error: ${err.message || err}`);
             });
         }
 
         function triggerHeal(service) {
+            const adminKey = getAdminKey();
+            if (!adminKey) {
+                showToast("Admin Key required: Click 'Admin Key' in header to configure authentication.");
+                openAdminKeyModal();
+                return;
+            }
             showToast(`Manual healing triggered for ${service}...`);
+
             fetch(`/api/dashboard/healing/trigger?service=${encodeURIComponent(service)}`, {
-                method: "POST"
+                method: "POST",
+                headers: {
+                    'X-Admin-Key': adminKey
+                }
             })
-            .then(r => r.json())
+            .then(r => {
+                if (r.status === 401 || r.status === 403) {
+                    throw new Error(`Authentication Failed (${r.status}): Invalid or missing X-Admin-Key.`);
+                }
+                return r.json();
+            })
             .then(data => {
                 showToast(`Remediation executed on ${service}`);
                 pollDashboard();
             })
             .catch(err => {
-                showToast(`Healing trigger error: ${err}`);
+                showToast(`Healing trigger error: ${err.message || err}`);
             });
         }
 
         function resetAll() {
+            const adminKey = getAdminKey();
+            if (!adminKey) {
+                showToast("Admin Key required: Click 'Admin Key' in header to configure authentication.");
+                openAdminKeyModal();
+                return;
+            }
             if (!confirm("Reset all microservice chaos states, anomaly confirmation windows, healing logs, and database tables?")) return;
             showToast("Resetting entire cluster state...");
-            fetch('/api/dashboard/reset', { method: "POST" })
-            .then(r => r.json())
+
+            fetch('/api/dashboard/reset', {
+                method: "POST",
+                headers: {
+                    'X-Admin-Key': adminKey
+                }
+            })
+            .then(r => {
+                if (r.status === 401 || r.status === 403) {
+                    throw new Error(`Authentication Failed (${r.status}): Invalid or missing X-Admin-Key.`);
+                }
+                return r.json();
+            })
             .then(data => {
                 showToast("System cleanly reset to baseline healthy state!");
                 pollDashboard();
             })
             .catch(err => {
-                showToast(`Reset error: ${err}`);
+                showToast(`Reset error: ${err.message || err}`);
             });
         }
 
+        // --- 5. UI FORMATTING HELPERS ---
         function getStatusBadge(status) {
             switch(status) {
                 case 'HEALTHY':
@@ -1094,25 +1231,152 @@
         function getActionTag(action) {
             switch(action) {
                 case 'RESTART':
-                    return '<span class="badge badge-danger">RESTART</span>';
+                    return '<span class="badge badge-danger">RESTART (L3)</span>';
                 case 'TRAFFIC_REDIRECTION':
-                    return '<span class="badge badge-warning">GATEWAY FALLBACK</span>';
+                    return '<span class="badge badge-warning">GATEWAY FALLBACK (L2)</span>';
                 case 'RATE_LIMIT':
-                    return '<span class="badge badge-info">RATE LIMIT</span>';
+                    return '<span class="badge badge-info">RATE LIMIT (L1)</span>';
                 default:
                     return `<span class="badge badge-info">${action || 'N/A'}</span>`;
             }
         }
 
+        // --- 6. CHART.JS REAL-TIME TELEMETRY CHARTS ---
+        let latencyChartInstance = null;
+        let errorCpuChartInstance = null;
+        const chartHistory = {
+            labels: [],
+            orderLatency: [],
+            paymentLatency: [],
+            inventoryLatency: [],
+            errorRate: [],
+            cpuUsage: []
+        };
+
+        function initCharts() {
+            const ctxLatency = document.getElementById('latencyChart');
+            const ctxErrorCpu = document.getElementById('errorCpuChart');
+            if (!ctxLatency || !ctxErrorCpu || typeof Chart === 'undefined') return;
+
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
+            const textColor = isDark ? '#94a3b8' : '#64748b';
+
+            latencyChartInstance = new Chart(ctxLatency, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        { label: 'Payment (ms)', data: [], borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', tension: 0.3, fill: true },
+                        { label: 'Order (ms)', data: [], borderColor: '#f97316', backgroundColor: 'transparent', tension: 0.3 },
+                        { label: 'Inventory (ms)', data: [], borderColor: '#38bdf8', backgroundColor: 'transparent', tension: 0.3 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: textColor, font: { size: 10 } } } },
+                    scales: {
+                        x: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 9 } } },
+                        y: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 9 } }, beginAtZero: true }
+                    }
+                }
+            });
+
+            errorCpuChartInstance = new Chart(ctxErrorCpu, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        { label: 'Error Rate (%)', data: [], borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', tension: 0.3, fill: true },
+                        { label: 'Avg CPU (%)', data: [], borderColor: '#10b981', backgroundColor: 'transparent', tension: 0.3 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: textColor, font: { size: 10 } } } },
+                    scales: {
+                        x: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 9 } } },
+                        y: { grid: { color: gridColor }, ticks: { color: textColor, font: { size: 9 } }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        function updateChartTheme(theme) {
+            if (!latencyChartInstance || !errorCpuChartInstance) return;
+            const isDark = theme === 'dark';
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
+            const textColor = isDark ? '#94a3b8' : '#64748b';
+
+            [latencyChartInstance, errorCpuChartInstance].forEach(chart => {
+                chart.options.scales.x.grid.color = gridColor;
+                chart.options.scales.y.grid.color = gridColor;
+                chart.options.scales.x.ticks.color = textColor;
+                chart.options.scales.y.ticks.color = textColor;
+                chart.options.plugins.legend.labels.color = textColor;
+                chart.update();
+            });
+        }
+
+        function appendChartData(timeStr, services) {
+            if (!latencyChartInstance || !errorCpuChartInstance) return;
+
+            if (chartHistory.labels.length >= 15) {
+                chartHistory.labels.shift();
+                chartHistory.orderLatency.shift();
+                chartHistory.paymentLatency.shift();
+                chartHistory.inventoryLatency.shift();
+                chartHistory.errorRate.shift();
+                chartHistory.cpuUsage.shift();
+            }
+
+            let orderLat = 0, payLat = 0, invLat = 0, maxErr = 0, totalCpu = 0;
+            if (services) {
+                services.forEach(s => {
+                    totalCpu += (s.cpu || 0);
+                    if (s.errorRate > maxErr) maxErr = s.errorRate;
+                    if (s.name === 'order-service') orderLat = s.latency || 0;
+                    if (s.name === 'payment-service') payLat = s.latency || 0;
+                    if (s.name === 'inventory-service') invLat = s.latency || 0;
+                });
+            }
+
+            const avgCpu = services && services.length > 0 ? (totalCpu / services.length) : 0;
+
+            chartHistory.labels.push(timeStr);
+            chartHistory.orderLatency.push(orderLat);
+            chartHistory.paymentLatency.push(payLat);
+            chartHistory.inventoryLatency.push(invLat);
+            chartHistory.errorRate.push(maxErr);
+            chartHistory.cpuUsage.push(avgCpu);
+
+            latencyChartInstance.data.labels = chartHistory.labels;
+            latencyChartInstance.data.datasets[0].data = chartHistory.paymentLatency;
+            latencyChartInstance.data.datasets[1].data = chartHistory.orderLatency;
+            latencyChartInstance.data.datasets[2].data = chartHistory.inventoryLatency;
+            latencyChartInstance.update('none');
+
+            errorCpuChartInstance.data.labels = chartHistory.labels;
+            errorCpuChartInstance.data.datasets[0].data = chartHistory.errorRate;
+            errorCpuChartInstance.data.datasets[1].data = chartHistory.cpuUsage;
+            errorCpuChartInstance.update('none');
+        }
+
+        // --- 7. TABLE & CARD RENDERERS ---
         function renderHealthTable(services) {
             const tbody = document.getElementById("servicesHealthTableBody");
-            if (!services || services.length === 0) return;
+            if (!services || services.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 16px;">Data unavailable (No telemetry received).</td></tr>`;
+                return;
+            }
 
             let html = '';
             services.forEach(s => {
                 const apiPath = s.name === 'order-service' ? '/orders' : (s.name === 'payment-service' ? '/payments' : '/inventory');
-                const latClass = s.latency > 1000 ? 'color: var(--status-red-dot); font-weight: 700;' : (s.latency > 300 ? 'color: var(--status-amber-dot); font-weight: 600;' : '');
-                const errClass = s.errorRate > 0 ? 'color: var(--status-red-dot); font-weight: 700;' : '';
+                const latClass = s.latency > 1000 ? 'color: var(--accent-red); font-weight: 700;' : (s.latency > 300 ? 'color: var(--accent-orange); font-weight: 600;' : '');
+                const errClass = s.errorRate > 0 ? 'color: var(--accent-red); font-weight: 700;' : '';
 
                 html += `
                 <tr>
@@ -1122,13 +1386,13 @@
                             <span>${s.name}</span>
                         </div>
                     </td>
-                    <td><span class="port-badge">${s.port}</span></td>
+                    <td><span class="port-badge">:${s.port}</span></td>
                     <td><a href="${apiPath}" target="_blank" class="endpoint-link">${apiPath} &nearr;</a></td>
                     <td><span class="badge ${s.health === 'UP' ? 'badge-healthy' : 'badge-danger'}">${s.health}</span></td>
                     <td>${getStatusBadge(s.anomalyStatus)}</td>
-                    <td><span class="num-val" style="${latClass}">${s.latency} ms</span></td>
-                    <td><span class="num-val" style="${errClass}">${s.errorRate}%</span></td>
-                    <td><span class="num-val">${s.requestRate} req/s</span></td>
+                    <td><span style="${latClass}">${s.latency} ms</span></td>
+                    <td><span style="${errClass}">${s.errorRate}%</span></td>
+                    <td><span>${s.requestRate} req/s</span></td>
                 </tr>
                 `;
             });
@@ -1137,20 +1401,23 @@
 
         function renderTelemetryCards(services) {
             const grid = document.getElementById("telemetryCardsGrid");
-            if (!services || services.length === 0) return;
+            if (!services || services.length === 0) {
+                grid.innerHTML = '<div style="color: var(--text-muted); padding: 12px;">Telemetry data unavailable.</div>';
+                return;
+            }
 
             let html = '';
             services.forEach(s => {
-                const cpuPct = Math.min(100, Math.max(0, Math.round(s.cpu * 5))); // scale visually for display
-                const cpuBarColor = cpuPct > 80 ? 'var(--status-red-dot)' : (cpuPct > 40 ? 'var(--status-amber-dot)' : 'var(--primary-accent)');
-                
+                const cpuPct = Math.min(100, Math.max(0, Math.round(s.cpu * 5)));
+                const cpuBarColor = cpuPct > 80 ? 'var(--accent-red)' : (cpuPct > 40 ? 'var(--accent-orange)' : 'var(--status-healthy-dot)');
+
                 const memPct = Math.min(100, Math.max(0, Math.round(s.memory * 10)));
-                const memBarColor = memPct > 80 ? 'var(--status-red-dot)' : 'var(--primary-accent)';
+                const memBarColor = memPct > 80 ? 'var(--accent-red)' : 'var(--status-info-dot)';
 
                 html += `
                 <div class="telemetry-card">
                     <div class="telemetry-card-header">
-                        <span class="telemetry-card-title">${s.name}</span>
+                        <span>${s.name}</span>
                         <span class="port-badge">:${s.port}</span>
                     </div>
 
@@ -1177,14 +1444,14 @@
                     <div class="metric-item">
                         <div class="metric-meta">
                             <span class="label">Response Latency</span>
-                            <span class="value" style="${s.latency > 300 ? 'color: var(--status-red-dot); font-weight: 700;' : ''}">${s.latency} ms</span>
+                            <span class="value" style="${s.latency > 300 ? 'color: var(--accent-red); font-weight: 700;' : ''}">${s.latency} ms</span>
                         </div>
                     </div>
 
                     <div class="metric-item">
                         <div class="metric-meta">
                             <span class="label">Error Rate</span>
-                            <span class="value" style="${s.errorRate > 0 ? 'color: var(--status-red-dot); font-weight: 700;' : ''}">${s.errorRate}%</span>
+                            <span class="value" style="${s.errorRate > 0 ? 'color: var(--accent-red); font-weight: 700;' : ''}">${s.errorRate}%</span>
                         </div>
                     </div>
 
@@ -1212,50 +1479,34 @@
 
                 let windowBars = '';
                 for (let i = 0; i < total; i++) {
-                    if (i < count) {
-                        windowBars += '<div class="window-block window-block-active"></div>';
-                    } else {
-                        windowBars += '<div class="window-block"></div>';
-                    }
+                    const activeColor = i < count ? 'background-color: var(--accent-red);' : 'background-color: var(--bg-panel-subtle);';
+                    windowBars += `<div style="height: 12px; flex: 1; border-radius: 2px; ${activeColor} border: 1px solid var(--border-subtle);"></div>`;
                 }
 
-                let decisionText = 'Quiescent (Normal operation)';
+                let decisionText = 'Quiescent (Baseline normal)';
                 if (count >= 3) {
-                    decisionText = 'Anomaly Confirmed (Remediation active)';
+                    decisionText = 'Anomaly Confirmed (Autonomous healing initiated)';
                 } else if (count > 0) {
-                    decisionText = 'Suspect (Anti-flapping verification)';
+                    decisionText = 'Suspect (Anti-flapping hysteresis active)';
                 }
 
                 html += `
-                <div class="anomaly-card">
-                    <div class="anomaly-card-top">
-                        <span class="telemetry-card-title">${s.name}</span>
+                <div class="telemetry-card">
+                    <div class="telemetry-card-header">
+                        <span>${s.name}</span>
                         ${getStatusBadge(s.anomalyStatus)}
                     </div>
-
-                    <div class="anomaly-spec-row">
-                        <span class="anomaly-spec-label">ML Model</span>
-                        <span class="anomaly-spec-val">Isolation Forest</span>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">
+                        <div>Model: <strong>Isolation Forest</strong> (Contamination: 0.04)</div>
+                        <div>Boundary: <strong>&theta; = -0.5140</strong> (Constrained FPR &le; 5%)</div>
+                        <div style="margin-top: 4px;">State: <strong style="color: var(--text-primary);">${decisionText}</strong></div>
                     </div>
-
-                    <div class="anomaly-spec-row">
-                        <span class="anomaly-spec-label">Confirmation Window</span>
-                        <span class="anomaly-spec-val">${s.windowScore} (K=3)</span>
+                    <div style="font-size: 0.6875rem; color: var(--text-muted); display: flex; justify-content: space-between; margin-bottom: 4px;">
+                        <span>Hysteresis Window</span>
+                        <span>${count} of ${total} Cycles</span>
                     </div>
-
-                    <div class="anomaly-spec-row">
-                        <span class="anomaly-spec-label">Decision State</span>
-                        <span class="anomaly-spec-val" style="font-size: 0.72rem;">${decisionText}</span>
-                    </div>
-
-                    <div style="margin-top: 10px;">
-                        <div style="font-size: 0.6875rem; color: var(--text-muted); display: flex; justify-content: space-between;">
-                            <span>Hysteresis Buffer</span>
-                            <span>${count} of ${total} Cycles</span>
-                        </div>
-                        <div class="window-step-track">
-                            ${windowBars}
-                        </div>
+                    <div style="display: flex; gap: 4px;">
+                        ${windowBars}
                     </div>
                 </div>
                 `;
@@ -1266,7 +1517,7 @@
         function renderAuditTrail(history) {
             const tbody = document.getElementById("auditTableBody");
             if (!history || history.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">No remediation events recorded yet. Controlled faults can be injected below to observe autonomous self-healing.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 24px;">No remediation events recorded yet. Controlled faults can be injected below to observe autonomous self-healing.</td></tr>`;
                 return;
             }
 
@@ -1275,120 +1526,146 @@
                 const ts = item.timestamp ? item.timestamp.replace('T', ' ').substring(0, 19) : '-';
                 const isRecovered = item.actionStatus === 'RECOVERED' || item.recoveryStatus === 'RECOVERED';
                 const isCooldown = item.actionStatus === 'SKIPPED_COOLDOWN' || item.recoveryStatus === 'SKIPPED';
-                
+                const isSuppressed = item.actionStatus === 'SUPPRESSED_TOPOLOGY' || item.recoveryStatus === 'SUPPRESSED';
+
                 let statusBadge = '<span class="badge badge-danger">FAILED</span>';
                 if (isRecovered) {
                     statusBadge = '<span class="badge badge-healthy"><span class="status-dot status-dot-green"></span>RECOVERED</span>';
                 } else if (isCooldown) {
                     statusBadge = '<span class="badge badge-warning"><span class="status-dot status-dot-amber"></span>SKIPPED COOLDOWN</span>';
+                } else if (isSuppressed) {
+                    statusBadge = '<span class="badge badge-info">&#128737; TOPOLOGY SUPPRESSED</span>';
                 }
 
                 html += `
                 <tr>
-                    <td class="num-val">${ts}</td>
+                    <td style="font-family: monospace;">${ts}</td>
                     <td><strong>${item.serviceName}</strong></td>
                     <td>${getActionTag(item.actionType)}</td>
-                    <td style="max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${item.triggerReason || ''}">${item.triggerReason || '-'}</td>
+                    <td style="max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${item.triggerReason || ''}">${item.triggerReason || '-'}</td>
                     <td>${statusBadge}</td>
-                    <td class="num-val">${item.executionDurationMs != null ? item.executionDurationMs + ' ms' : '-'}</td>
+                    <td style="font-family: monospace;">${item.executionDurationMs != null ? item.executionDurationMs + ' ms' : '-'}</td>
                 </tr>
                 `;
             });
             tbody.innerHTML = html;
         }
 
+        // --- 8. LIVE AGGREGATOR POLLING LOOP ---
         function pollDashboard() {
             fetch('/api/dashboard/stats')
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) throw new Error("HTTP " + res.status);
+                    return res.json();
+                })
                 .then(data => {
-                    // 1. Update Last Updated Time
                     const now = new Date();
                     const timeStr = now.toTimeString().split(' ')[0];
                     document.getElementById("lastUpdatedTime").textContent = `Updated: ${timeStr}`;
 
-                    // 2. Evaluate Overall System Status
+                    // Evaluate Overall System Status
                     let hasCritical = false;
                     let hasWarning = false;
-                    if (data.services) {
+                    let totalLat = 0;
+                    let totalErr = 0;
+                    let activeAnoCount = 0;
+
+                    if (data.services && data.services.length > 0) {
                         data.services.forEach(s => {
-                            if (s.anomalyStatus === 'CONFIRMED_ANOMALY' || s.health !== 'UP') hasCritical = true;
-                            else if (s.anomalyStatus === 'SUSPECT' || s.anomalyStatus === 'RECOVERING') hasWarning = true;
+                            totalLat += (s.latency || 0);
+                            totalErr += (s.errorRate || 0);
+                            if (s.anomalyStatus === 'CONFIRMED_ANOMALY' || s.health !== 'UP') {
+                                hasCritical = true;
+                                activeAnoCount++;
+                            } else if (s.anomalyStatus === 'SUSPECT' || s.anomalyStatus === 'RECOVERING') {
+                                hasWarning = true;
+                            }
                         });
+
+                        const avgLat = Math.round(totalLat / data.services.length);
+                        const avgErr = (totalErr / data.services.length).toFixed(1);
+                        document.getElementById("kpiAvgLatency").textContent = `${avgLat} ms`;
+                        document.getElementById("kpiAvgError").textContent = `${avgErr}%`;
+                    } else {
+                        document.getElementById("kpiAvgLatency").textContent = 'Data unavailable';
+                        document.getElementById("kpiAvgError").textContent = 'Data unavailable';
                     }
 
                     const sysPill = document.getElementById("systemStatusPill");
                     const sysDot = document.getElementById("systemStatusDot");
                     const sysLabel = document.getElementById("systemStatusLabel");
+                    const kpiStatus = document.getElementById("kpiClusterStatus");
 
                     if (hasCritical) {
                         sysPill.className = "status-pill status-pill-critical";
                         sysDot.className = "status-dot status-dot-red";
                         sysLabel.textContent = "CRITICAL ANOMALY";
+                        kpiStatus.textContent = "CRITICAL";
+                        kpiStatus.style.color = "var(--accent-red)";
                     } else if (hasWarning) {
                         sysPill.className = "status-pill status-pill-warning";
                         sysDot.className = "status-dot status-dot-amber";
                         sysLabel.textContent = "DEGRADED";
+                        kpiStatus.textContent = "DEGRADED";
+                        kpiStatus.style.color = "var(--accent-orange)";
                     } else {
                         sysPill.className = "status-pill status-pill-healthy";
                         sysDot.className = "status-dot status-dot-green";
                         sysLabel.textContent = "HEALTHY";
+                        kpiStatus.textContent = "HEALTHY";
+                        kpiStatus.style.color = "var(--status-healthy-dot)";
                     }
 
-                    // 3. Update KPIs
+                    document.getElementById("kpiActiveAnomalies").textContent = `${activeAnoCount} Active Confirmations`;
+
+                    // KPIs
                     if (data.kpis) {
                         document.getElementById("kpiSuccessRate").textContent = (data.kpis.healingSuccessRate || 100.0) + '%';
-                        document.getElementById("kpiTotalActions").textContent = data.kpis.totalRemediations || 0;
-                        document.getElementById("kpiRecoveredCount").textContent = `${data.kpis.successfulRecoveries || 0} Verified Recovered`;
+                        document.getElementById("kpiRecoveredCount").textContent = `${data.kpis.successfulRecoveries || 0} Verified Recovered (${data.kpis.totalRemediations || 0} Total Actions)`;
                     }
 
-                    // 4. Update Database Status
+                    // Database Engine
                     if (data.database) {
-                        document.getElementById("kpiDbEngine").textContent = data.database.databaseStatus || 'CONNECTED';
-                        document.getElementById("kpiDbDialect").textContent = `${data.database.databaseProductName || 'MySQL'} (${data.database.telemetryRowCount || 0} telemetry rows)`;
-                        document.getElementById("dbItemDetails").textContent = `${data.database.databaseProductName || 'MySQL'} &bull; ${data.database.healingAuditRowCount || 0} audit rows`;
+                        document.getElementById("dbStatusText").textContent = data.database.databaseStatus || 'CONNECTED';
+                        document.getElementById("dbInfoText").textContent = `${data.database.databaseProductName || 'MySQL'} (${data.database.telemetryRowCount || 0} telemetry rows)`;
                     }
 
-                    // 5. Update ML Status
+                    // ML Status
                     if (data.mlService) {
                         const isUp = data.mlService.status === 'UP';
-                        const badge = document.getElementById("mlStatusBadge");
-                        badge.textContent = isUp ? 'UP' : 'DOWN';
-                        badge.className = isUp ? 'badge badge-healthy' : 'badge badge-danger';
+                        document.getElementById("mlStatusText").textContent = isUp ? 'ONLINE' : 'OFFLINE';
+                        document.getElementById("mlStatusText").style.color = isUp ? 'var(--status-healthy-dot)' : 'var(--accent-red)';
                     }
 
-                    // 6. Update Active Mitigations
+                    // Mitigations
                     if (data.healingEngine) {
-                        const redirections = data.healingEngine.activeRedirections || [];
-                        const rateLimits = data.healingEngine.activeRateLimits || {};
-                        const rCount = redirections.length;
-                        const lCount = Object.keys(rateLimits).length;
-                        document.getElementById("activeMitigationsCount").textContent = `${rCount} Redirections, ${lCount} Rate Limits`;
-                        const mitBadge = document.getElementById("mitigationsBadge");
-                        if (rCount > 0 || lCount > 0) {
-                            mitBadge.textContent = 'ACTIVE';
-                            mitBadge.className = 'badge badge-warning';
-                        } else {
-                            mitBadge.textContent = 'NORMAL';
-                            mitBadge.className = 'badge badge-healthy';
-                        }
+                        const redirs = data.healingEngine.activeRedirections || [];
+                        const limits = data.healingEngine.activeRateLimits || {};
+                        const rCount = redirs.length;
+                        const lCount = Object.keys(limits).length;
+                        document.getElementById("activeMitigationsCount").textContent = `${rCount + lCount} Active (${rCount} Redirections, ${lCount} Limits)`;
 
                         renderAuditTrail(data.healingEngine.recentAuditHistory);
                     }
 
-                    // 7. Render Service Sections
+                    // Render Tables & Cards
                     if (data.services) {
                         renderHealthTable(data.services);
                         renderTelemetryCards(data.services);
                         renderAnomalyCards(data.services);
+                        appendChartData(timeStr, data.services);
                     }
                 })
                 .catch(err => {
                     console.error("Dashboard polling error:", err);
+                    document.getElementById("lastUpdatedTime").textContent = "Polling: Reconnecting...";
                 });
         }
 
-        // Initial fetch and 3-second live polling loop
+        // --- 9. INITIALIZATION ON DOM READY ---
         document.addEventListener("DOMContentLoaded", () => {
+            initTheme();
+            initCharts();
             pollDashboard();
             setInterval(pollDashboard, 3000);
         });

@@ -82,6 +82,18 @@ public class DashboardController {
     }
 
     /**
+     * Dedicated Project Information & System Overview Page View.
+     */
+    @GetMapping({"/info", "/project-info"})
+    public Mono<Rendering> renderProjectInfo() {
+        return buildDashboardData().map(data ->
+                Rendering.view("project-info")
+                        .modelAttribute("data", data)
+                        .build()
+        );
+    }
+
+    /**
      * Live JSON API endpoint polled by dashboard JavaScript every 3 seconds.
      */
     @GetMapping("/api/dashboard/stats")
@@ -245,8 +257,15 @@ public class DashboardController {
                 mlInfo.put("status", "UNREACHABLE");
             }
             mlInfo.put("model", "Isolation Forest (scikit-learn)");
-            mlInfo.put("contamination", 0.14);
+            mlInfo.put("contamination", 0.04);
             mlInfo.put("estimators", 100);
+            mlInfo.put("decisionThreshold", -0.5140227742629923);
+            mlInfo.put("heldOutAccuracy", 0.9448);
+            mlInfo.put("heldOutPrecision", 0.7593);
+            mlInfo.put("heldOutRecall", 0.9111);
+            mlInfo.put("heldOutF1", 0.8283);
+            mlInfo.put("heldOutFpr", 0.0494);
+            mlInfo.put("heldOutSamples", 308);
             data.put("mlService", mlInfo);
 
             // 4. Healing Engine Status

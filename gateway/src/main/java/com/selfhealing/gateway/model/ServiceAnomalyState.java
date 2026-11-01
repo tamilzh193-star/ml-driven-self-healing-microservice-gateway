@@ -17,6 +17,12 @@ public class ServiceAnomalyState {
     private int anomaliesInWindow;
     private int windowSize;
     private double averageAnomalyScore;
+    private double evidenceScore = 0.0;
+    private double evidenceThreshold = 3.0;
+    private String confirmationMode = "swea";
+    private String dominantFeature;
+    private String signature;
+    private java.util.Map<String, Double> attribution;
     private String firstAnomalyTimestamp;
     private String confirmedTimestamp;
     private String lastEvaluationTimestamp;
@@ -37,6 +43,8 @@ public class ServiceAnomalyState {
         this.consecutiveNormal = 0;
         this.anomaliesInWindow = 0;
         this.averageAnomalyScore = 0.0;
+        this.evidenceScore = 0.0;
+        this.evidenceThreshold = 3.0;
     }
 
     public synchronized void recordEvaluation(MlPredictionResponse prediction, int windowCapacity) {
@@ -72,6 +80,15 @@ public class ServiceAnomalyState {
                 scoreSum += p.getAnomalyScore();
             }
         }
+        if (prediction.getDominantFeature() != null) {
+            this.dominantFeature = prediction.getDominantFeature();
+        }
+        if (prediction.getSignature() != null) {
+            this.signature = prediction.getSignature();
+        }
+        if (prediction.getAttribution() != null) {
+            this.attribution = prediction.getAttribution();
+        }
         this.anomaliesInWindow = count;
         this.averageAnomalyScore = slidingWindow.isEmpty() ? 0.0 : Math.round((scoreSum / slidingWindow.size()) * 10000.0) / 10000.0;
     }
@@ -83,6 +100,10 @@ public class ServiceAnomalyState {
         this.consecutiveNormal = 0;
         this.anomaliesInWindow = 0;
         this.averageAnomalyScore = 0.0;
+        this.evidenceScore = 0.0;
+        this.dominantFeature = null;
+        this.signature = null;
+        this.attribution = null;
         this.firstAnomalyTimestamp = null;
         this.confirmedTimestamp = null;
     }
@@ -177,5 +198,65 @@ public class ServiceAnomalyState {
 
     public void setLatestPrediction(MlPredictionResponse latestPrediction) {
         this.latestPrediction = latestPrediction;
+    }
+
+    public double getEvidenceScore() {
+        return evidenceScore;
+    }
+
+    public void setEvidenceScore(double evidenceScore) {
+        this.evidenceScore = evidenceScore;
+    }
+
+    public double getEvidenceThreshold() {
+        return evidenceThreshold;
+    }
+
+    public void setEvidenceThreshold(double evidenceThreshold) {
+        this.evidenceThreshold = evidenceThreshold;
+    }
+
+    public String getConfirmationMode() {
+        return confirmationMode;
+    }
+
+    public void setConfirmationMode(String confirmationMode) {
+        this.confirmationMode = confirmationMode;
+    }
+
+    public String getDominantFeature() {
+        return dominantFeature;
+    }
+
+    public void setDominantFeature(String dominantFeature) {
+        this.dominantFeature = dominantFeature;
+    }
+
+    public String getSignature() {
+        return signature;
+    }
+
+    public void setSignature(String signature) {
+        this.signature = signature;
+    }
+
+    public java.util.Map<String, Double> getAttribution() {
+        return attribution;
+    }
+
+    public void setAttribution(java.util.Map<String, Double> attribution) {
+        this.attribution = attribution;
+    }
+
+    public boolean isConfirmed() {
+        return this.status == AnomalyStatus.CONFIRMED_ANOMALY;
+    }
+
+    public String getFailureSignature() {
+        return this.signature;
+    }
+
+    public void setFailureSignature(String signature) {
+        this.signature = signature;
     }
 }

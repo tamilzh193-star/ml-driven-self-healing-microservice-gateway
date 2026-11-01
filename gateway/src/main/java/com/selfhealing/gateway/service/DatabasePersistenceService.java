@@ -32,7 +32,15 @@ public class DatabasePersistenceService {
     private static final Logger log = LoggerFactory.getLogger(DatabasePersistenceService.class);
 
     @Value("${persistence.database.enabled:true}")
-    private boolean persistenceEnabled;
+    private boolean persistenceEnabled = true;
+
+    public void setPersistenceEnabled(boolean persistenceEnabled) {
+        this.persistenceEnabled = persistenceEnabled;
+    }
+
+    public boolean isPersistenceEnabled() {
+        return persistenceEnabled;
+    }
 
     private final JdbcTemplate jdbcTemplate;
     private final DataSource dataSource;
@@ -284,12 +292,58 @@ public class DatabasePersistenceService {
         return 0.0;
     }
 
+    public Mono<Void> persistPolicyStatAsync(String contextKey, String actionType, double alpha, double beta, int successes, int failures) {
+        if (!persistenceEnabled || jdbcTemplate == null) {
+            return Mono.empty();
+        }
+
+        return Mono.fromRunnable(() -> {
+            try {
+                String sql = "INSERT INTO policy_stats (context_key, action_type, alpha, beta, successes, failures) " +
+                        "VALUES (?, ?, ?, ?, ?, ?) " +
+                        "ON DUPLICATE KEY UPDATE alpha=?, beta=?, successes=?, failures=?, updated_at=CURRENT_TIMESTAMP";
+                jdbcTemplate.update(sql,
+                        contextKey, actionType, alpha, beta, successes, failures,
+                        alpha, beta, successes, failures);
+                log.debug("Persisted policy stats for {} - {}: alpha={}, beta={}", contextKey, actionType, alpha, beta);
+            } catch (Exception e) {
+                try {
+                    String h2Sql = "MERGE INTO policy_stats (context_key, action_type, alpha, beta, successes, failures) " +
+                            "KEY (context_key, action_type) VALUES (?, ?, ?, ?, ?, ?)";
+                    jdbcTemplate.update(h2Sql, contextKey, actionType, alpha, beta, successes, failures);
+                } catch (Exception ignored) {
+                    log.debug("Failed to persist policy stats to db: {}", e.getMessage());
+                }
+            }
+        }).subscribeOn(Schedulers.boundedElastic()).then();
+    }
+
+    /**
+     * Loads all persisted contextual Thompson sampling policy statistics from the database.
+     * Returns an empty list safely if persistence is disabled, jdbcTemplate is null, or if table/db is unavailable.
+     */
+    public List<Map<String, Object>> loadAllPolicyStats() {
+        if (!persistenceEnabled || jdbcTemplate == null) {
+            return Collections.emptyList();
+        }
+        try {
+            String sql = "SELECT context_key, action_type, alpha, beta, successes, failures FROM policy_stats";
+            return jdbcTemplate.queryForList(sql);
+        } catch (Exception e) {
+            log.warn("Could not load policy_stats from database (table missing or offline): {}", e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
     public void resetAllTables() {
         if (jdbcTemplate == null) return;
         try {
             jdbcTemplate.execute("DELETE FROM telemetry_records");
             jdbcTemplate.execute("DELETE FROM anomaly_predictions");
             jdbcTemplate.execute("DELETE FROM healing_audit_logs");
+            try {
+                jdbcTemplate.execute("DELETE FROM policy_stats");
+            } catch (Exception ignored) {}
             fallbackTelemetry.clear();
             fallbackHealingAudits.clear();
             log.info("Reset all database tables successfully.");

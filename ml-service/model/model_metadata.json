@@ -1,6 +1,19 @@
 {
   "algorithm": "IsolationForest",
   "framework": "scikit-learn",
+  "model_version": "2.1-calibrated",
+  "decision_threshold": -0.5140227742629923,
+  "threshold_selection_protocol": "calibration_set_constrained_recall_maximization_fpr_le_0.05",
+  "threshold_metadata": {
+    "target_max_fpr": 0.05,
+    "selected_threshold": -0.5140227742629923,
+    "calibration_fpr": 0.0421,
+    "calibration_recall": 0.9149,
+    "total_calibration_records": 308,
+    "normal_records": 261,
+    "anomaly_records": 47,
+    "selection_method": "constrained_recall_maximization_fpr_le_0.05"
+  },
   "features": [
     "cpu",
     "memory",
@@ -8,47 +21,109 @@
     "error_rate",
     "request_rate"
   ],
+  "feature_medians": {
+    "cpu": 2.395,
+    "memory": 1.12,
+    "latency": 1.26,
+    "error_rate": 0.0,
+    "request_rate": 3.45
+  },
+  "scaled_feature_medians": {
+    "cpu": -0.21782476220248081,
+    "memory": -0.10386959722875605,
+    "latency": -0.0653660458905447,
+    "error_rate": -0.061352387344530246,
+    "request_rate": -0.10524238533495497
+  },
   "parameters": {
     "n_estimators": 100,
-    "contamination": 0.14,
+    "contamination": 0.04,
     "random_state": 42
   },
-  "training_timestamp": "2026-10-03T14:10:16.568013",
-  "evaluation_metrics": {
-    "accuracy": 0.9622,
-    "precision": 0.8843,
-    "recall": 0.8527,
-    "f1_score": 0.8682,
+  "training_timestamp": "2026-10-11T16:30:38.760910",
+  "data_integrity": {
+    "training_records": 800,
+    "data_leakage": "0.0% (Zero shared timestamps)",
+    "calibration_records": 308,
+    "test_records": 308,
+    "disjoint_verified": true
+  },
+  "calibration_metrics": {
+    "accuracy": 0.9513,
+    "precision": 0.7963,
+    "recall": 0.9149,
+    "f1_score": 0.8515,
+    "false_positive_rate": 0.0421,
     "confusion_matrix": {
-      "true_negatives": 1287,
-      "false_positives": 25,
-      "false_negatives": 33,
-      "true_positives": 191
+      "true_negatives": 250,
+      "false_positives": 11,
+      "false_negatives": 4,
+      "true_positives": 43
     },
     "per_scenario": {
       "NORMAL": {
-        "total_records": 1312,
-        "flagged_as_anomaly": 25,
-        "detection_rate_pct": 1.91
+        "total_records": 261,
+        "flagged_as_anomaly": 11,
+        "detection_rate_pct": 4.21
+      },
+      "MEMORY_STRESS": {
+        "total_records": 8,
+        "flagged_as_anomaly": 8,
+        "detection_rate_pct": 100.0
       },
       "SLOW_LATENCY": {
-        "total_records": 64,
-        "flagged_as_anomaly": 64,
+        "total_records": 14,
+        "flagged_as_anomaly": 14,
         "detection_rate_pct": 100.0
       },
       "ERROR_500": {
-        "total_records": 64,
-        "flagged_as_anomaly": 64,
+        "total_records": 13,
+        "flagged_as_anomaly": 13,
         "detection_rate_pct": 100.0
       },
       "CPU_STRESS": {
-        "total_records": 64,
-        "flagged_as_anomaly": 31,
-        "detection_rate_pct": 48.44
+        "total_records": 12,
+        "flagged_as_anomaly": 8,
+        "detection_rate_pct": 66.67
+      }
+    }
+  },
+  "evaluation_metrics": {
+    "accuracy": 0.9448,
+    "precision": 0.7593,
+    "recall": 0.9111,
+    "f1_score": 0.8283,
+    "false_positive_rate": 0.0494,
+    "confusion_matrix": {
+      "true_negatives": 250,
+      "false_positives": 13,
+      "false_negatives": 4,
+      "true_positives": 41
+    },
+    "per_scenario": {
+      "ERROR_500": {
+        "total_records": 13,
+        "flagged_as_anomaly": 13,
+        "detection_rate_pct": 100.0
+      },
+      "NORMAL": {
+        "total_records": 263,
+        "flagged_as_anomaly": 13,
+        "detection_rate_pct": 4.94
+      },
+      "CPU_STRESS": {
+        "total_records": 14,
+        "flagged_as_anomaly": 10,
+        "detection_rate_pct": 71.43
+      },
+      "SLOW_LATENCY": {
+        "total_records": 12,
+        "flagged_as_anomaly": 12,
+        "detection_rate_pct": 100.0
       },
       "MEMORY_STRESS": {
-        "total_records": 32,
-        "flagged_as_anomaly": 32,
+        "total_records": 6,
+        "flagged_as_anomaly": 6,
         "detection_rate_pct": 100.0
       }
     }

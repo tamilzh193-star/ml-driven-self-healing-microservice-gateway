@@ -20,5 +20,8 @@ public enum HealingStatus {
     SKIPPED_COOLDOWN,
 
     /** Action aborted because service reached maximum retry limit without recovery */
-    MAX_RETRIES_EXCEEDED
+    MAX_RETRIES_EXCEEDED,
+
+    /** Action suppressed because failure is localized to a downstream dependency */
+    SUPPRESSED_TOPOLOGY
 }

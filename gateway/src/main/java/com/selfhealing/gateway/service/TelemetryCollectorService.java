@@ -33,7 +33,10 @@ public class TelemetryCollectorService {
     @Value("${telemetry.collection.enabled:true}")
     private boolean collectionEnabled;
 
-    @Value("${telemetry.collection.csv-path:../dataset/telemetry.csv}")
+    @Value("${telemetry.collection.csv-enabled:false}")
+    private boolean csvEnabled;
+
+    @Value("${telemetry.collection.csv-path:runtime/telemetry_live.csv}")
     private String csvPath;
 
     @Value("${order.service.url:http://localhost:8081}")
@@ -96,6 +99,9 @@ public class TelemetryCollectorService {
     }
 
     private synchronized void initCsvFile() {
+        if (!csvEnabled) {
+            return;
+        }
         try {
             File file = new File(csvPath);
             File parentDir = file.getParentFile();
@@ -414,6 +420,9 @@ public class TelemetryCollectorService {
     }
 
     private synchronized void appendCsvRecord(ServiceTelemetry telemetry) {
+        if (!csvEnabled) {
+            return;
+        }
         try (PrintWriter writer = new PrintWriter(new FileWriter(csvPath, true))) {
             writer.println(telemetry.toCsvRow());
         } catch (IOException e) {

@@ -46,3 +46,14 @@ CREATE TABLE IF NOT EXISTS healing_audit_logs (
     timestamp VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS policy_stats (
+    context_key VARCHAR(100) NOT NULL,
+    action_type VARCHAR(30) NOT NULL,
+    alpha DOUBLE DEFAULT 1.0,
+    beta DOUBLE DEFAULT 1.0,
+    successes INT DEFAULT 0,
+    failures INT DEFAULT 0,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (context_key, action_type)
+);

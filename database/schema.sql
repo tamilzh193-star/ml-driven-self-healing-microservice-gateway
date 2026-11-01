@@ -68,3 +68,18 @@ CREATE TABLE IF NOT EXISTS healing_audit_logs (
     INDEX idx_recovery_status (recovery_status),
     INDEX idx_created (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ---------------------------------------------------------------------
+-- 4. Table: policy_stats
+-- Contextual Thompson Sampling policy posteriors (Beta distribution)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS policy_stats (
+    context_key VARCHAR(100) NOT NULL,
+    action_type VARCHAR(30) NOT NULL,
+    alpha DOUBLE DEFAULT 1.0,
+    beta DOUBLE DEFAULT 1.0,
+    successes INT DEFAULT 0,
+    failures INT DEFAULT 0,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (context_key, action_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

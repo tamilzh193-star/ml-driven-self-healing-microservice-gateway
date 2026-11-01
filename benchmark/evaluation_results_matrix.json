@@ -1,0 +1,56 @@
+{
+  "benchmark_timestamp": "2026-10-08T17:38:56.198447",
+  "runs_per_scenario": 20,
+  "scenarios_count": 5,
+  "total_trials_per_config": 100,
+  "summary": {
+    "B0_FixedConfirmation": {
+      "total_trials": 100,
+      "mttd_mean_sec": 15.27,
+      "mttd_std_sec": 0.81,
+      "mttd_p95_sec": 16.75,
+      "mttr_mean_sec": 8.55,
+      "mttr_std_sec": 1.13,
+      "mttr_p95_sec": 11.05,
+      "success_rate_pct": 80.0,
+      "topology_suppressed_trials": 0,
+      "redundant_victim_remediations": 20
+    },
+    "B1_RuleBased": {
+      "total_trials": 100,
+      "mttd_mean_sec": 14.75,
+      "mttd_std_sec": 1.17,
+      "mttd_p95_sec": 16.54,
+      "mttr_mean_sec": 7.72,
+      "mttr_std_sec": 1.39,
+      "mttr_p95_sec": 10.3,
+      "success_rate_pct": 82.0,
+      "topology_suppressed_trials": 0,
+      "redundant_victim_remediations": 20
+    },
+    "B2_NoAttribution": {
+      "total_trials": 100,
+      "mttd_mean_sec": 12.72,
+      "mttd_std_sec": 1.57,
+      "mttd_p95_sec": 15.42,
+      "mttr_mean_sec": 8.81,
+      "mttr_std_sec": 1.75,
+      "mttr_p95_sec": 11.92,
+      "success_rate_pct": 80.0,
+      "topology_suppressed_trials": 0,
+      "redundant_victim_remediations": 20
+    },
+    "P_ProposedFullPipeline": {
+      "total_trials": 100,
+      "mttd_mean_sec": 9.48,
+      "mttd_std_sec": 0.7,
+      "mttd_p95_sec": 10.64,
+      "mttr_mean_sec": 4.9,
+      "mttr_std_sec": 0.53,
+      "mttr_p95_sec": 5.76,
+      "success_rate_pct": 97.0,
+      "topology_suppressed_trials": 20,
+      "redundant_victim_remediations": 0
+    }
+  }
+}

@@ -16,6 +16,12 @@ public class MlPredictionResponse {
 
     private String timestamp;
     private Map<String, Object> features;
+    private Map<String, Double> attribution;
+
+    @JsonProperty("dominant_feature")
+    private String dominantFeature;
+
+    private String signature;
     private String error;
 
     public MlPredictionResponse() {}
@@ -84,5 +90,29 @@ public class MlPredictionResponse {
 
     public void setError(String error) {
         this.error = error;
+    }
+
+    public Map<String, Double> getAttribution() {
+        return attribution;
+    }
+
+    public void setAttribution(Map<String, Double> attribution) {
+        this.attribution = attribution;
+    }
+
+    public String getDominantFeature() {
+        return dominantFeature;
+    }
+
+    public void setDominantFeature(String dominantFeature) {
+        this.dominantFeature = dominantFeature;
+    }
+
+    public String getSignature() {
+        return signature;
+    }
+
+    public void setSignature(String signature) {
+        this.signature = signature;
     }
 }

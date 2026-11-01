@@ -1,0 +1,70 @@
+{
+  "algorithm": "IsolationForest",
+  "framework": "scikit-learn",
+  "features": [
+    "cpu",
+    "memory",
+    "latency",
+    "error_rate",
+    "request_rate"
+  ],
+  "feature_medians": {
+    "cpu": 0.47,
+    "memory": 1.23,
+    "latency": 0.86,
+    "error_rate": 0.0,
+    "request_rate": 0.2
+  },
+  "scaled_feature_medians": {
+    "cpu": -0.3753037759340723,
+    "memory": -0.1256540028073036,
+    "latency": -0.12033014157000016,
+    "error_rate": -0.13573757432403058,
+    "request_rate": -0.2077124947970176
+  },
+  "parameters": {
+    "n_estimators": 100,
+    "contamination": 0.14,
+    "random_state": 42
+  },
+  "training_timestamp": "2026-10-08T17:00:14.399016",
+  "evaluation_metrics": {
+    "accuracy": 0.6406,
+    "precision": 0.2887,
+    "recall": 1.0,
+    "f1_score": 0.448,
+    "confusion_matrix": {
+      "true_negatives": 760,
+      "false_positives": 552,
+      "false_negatives": 0,
+      "true_positives": 224
+    },
+    "per_scenario": {
+      "NORMAL": {
+        "total_records": 1312,
+        "flagged_as_anomaly": 552,
+        "detection_rate_pct": 42.07
+      },
+      "SLOW_LATENCY": {
+        "total_records": 64,
+        "flagged_as_anomaly": 64,
+        "detection_rate_pct": 100.0
+      },
+      "ERROR_500": {
+        "total_records": 64,
+        "flagged_as_anomaly": 64,
+        "detection_rate_pct": 100.0
+      },
+      "CPU_STRESS": {
+        "total_records": 64,
+        "flagged_as_anomaly": 64,
+        "detection_rate_pct": 100.0
+      },
+      "MEMORY_STRESS": {
+        "total_records": 32,
+        "flagged_as_anomaly": 32,
+        "detection_rate_pct": 100.0
+      }
+    }
+  }
+}
