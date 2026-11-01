@@ -75,3 +75,10 @@ docker-compose.override.yml
 *.bak
 *.orig
 logs/
+
+# Environment files
+.env.*
+!.env.example
+
+# Python environments
+.python-version
